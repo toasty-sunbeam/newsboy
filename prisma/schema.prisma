@@ -1,0 +1,80 @@
+// Newsboy Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Source {
+  id          String    @id @default(cuid())
+  name        String
+  feedUrl     String    @unique
+  siteUrl     String?
+  contentType String    @default("article") // article | webcomic | mixed
+  enabled     Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  articles    Article[]
+}
+
+model Article {
+  id                 String      @id @default(cuid())
+  url                String      @unique
+  title              String
+  sourceId           String
+  source             Source      @relation(fields: [sourceId], references: [id])
+  publishedAt        DateTime?
+  fetchedAt          DateTime    @default(now())
+  contentType        String      @default("article") // article | webcomic
+  heroImageUrl       String?
+  crayonImageUrl     String?
+  imageWidth         Int?
+  imageHeight        Int?
+  displayMode        String      @default("standard") // standard | wide | tall | preview | square | crayon
+  excerpt            String?
+  fullText           String?
+  readingTimeMinutes Int?
+  topics             String?     // JSON array stored as string
+  relevanceScore     Float       @default(0)
+  dailySlots         DailySlot[]
+}
+
+model DailyBriefing {
+  id                 String   @id @default(cuid())
+  date               DateTime @unique // Just the date, no time
+  pipSummary         String   // Pip's cockney briefing text
+  featuredArticleIds String   // JSON array of article IDs
+  generatedAt        DateTime @default(now())
+}
+
+model DailySlot {
+  id         String   @id @default(cuid())
+  date       DateTime // The day this slot is for
+  articleId  String
+  article    Article  @relation(fields: [articleId], references: [id])
+  revealHour Int      // 0-23, when this article becomes visible
+  position   Int      // Order within the day
+
+  @@unique([date, articleId])
+}
+
+model UserPreferences {
+  id             String   @id @default("default")
+  interests      String   @default("{}") // JSON: {"robotics": 0.8, "politics": 0.2}
+  sourceWeights  String   @default("{}") // JSON: per-source boost/suppress
+  moodBalance    Float    @default(0) // -1 (serious) to +1 (uplifting)
+  preferLongForm Boolean  @default(false)
+  preferVisual   Boolean  @default(true)
+  updatedAt      DateTime @updatedAt
+}
+
+model TuningLog {
+  id        String   @id @default(cuid())
+  input     String   // What the user said
+  parsed    String   // JSON: what we extracted
+  response  String   // What Pip said back
+  createdAt DateTime @default(now())
+}
