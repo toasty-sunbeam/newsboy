@@ -49,15 +49,15 @@
 
 				<div class="flex items-center space-x-3">
 					<span class="text-2xl">✅</span>
-					<span class="text-gray-700">OPML import ready</span>
+					<span class="text-gray-700">Category-based feed management</span>
 				</div>
 
 				<div class="flex items-center space-x-3 bg-amber-50 p-3 rounded-lg border-2 border-amber-200">
 					<span class="text-2xl">📥</span>
 					<div class="flex-1">
-						<span class="text-gray-700 font-semibold">Ready to import feeds!</span>
+						<span class="text-gray-700 font-semibold">Ready to add feeds!</span>
 						<p class="text-sm text-gray-600 mt-1">
-							Go to <a href="/settings" class="text-amber-600 hover:text-amber-700 font-semibold">Settings</a> to upload your OPML file
+							Go to <a href="/settings" class="text-amber-600 hover:text-amber-700 font-semibold">Settings</a> to create categories and paste RSS URLs
 						</p>
 					</div>
 				</div>
@@ -67,7 +67,7 @@
 			<div class="mt-8 bg-blue-50 rounded-lg p-6 border-2 border-blue-200">
 				<h3 class="text-xl font-bold text-gray-800 mb-3">What's Next?</h3>
 				<ul class="text-left space-y-2 text-gray-700">
-					<li>• <a href="/settings" class="text-amber-600 hover:text-amber-700 font-semibold">Import your RSS feeds (OPML)</a></li>
+					<li>• <a href="/settings" class="text-amber-600 hover:text-amber-700 font-semibold">Add your RSS feeds by category</a></li>
 					<li>• Implement RSS fetching and article storage</li>
 					<li>• Build the feed UI</li>
 					<li>• Set up the nightly batch job</li>
