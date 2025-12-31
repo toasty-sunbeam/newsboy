@@ -9,9 +9,14 @@ const globalForPrisma = globalThis as unknown as {
 	prisma: PrismaClient | undefined;
 };
 
-// Create libSQL client
-const databaseUrl = process.env.DATABASE_URL || 'file:./newsboy.db';
-const libsql = createClient({ url: databaseUrl });
+// Create libSQL client for local SQLite file
+const databaseUrl = process.env.DATABASE_URL || 'file:newsboy.db';
+
+// For local files, libsql needs the path without 'file:' prefix
+const isLocalFile = databaseUrl.startsWith('file:');
+const libsql = createClient({
+	url: isLocalFile ? databaseUrl.replace('file:', 'file://') : databaseUrl
+});
 
 // Create Prisma adapter
 const adapter = new PrismaLibSql(libsql);
