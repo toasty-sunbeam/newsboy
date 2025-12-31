@@ -1,10 +1,12 @@
 // Prisma 7 configuration for migrations
-// This file is used by Prisma CLI for migrations
+import type { Config } from '@prisma/client';
 
-export default {
+const config: Config = {
 	datasources: {
 		db: {
 			url: process.env.DATABASE_URL || 'file:./newsboy.db'
 		}
 	}
 };
+
+export default config;
