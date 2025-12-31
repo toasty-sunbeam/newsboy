@@ -5,10 +5,16 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaLibSql } from '@prisma/adapter-libsql';
 import { createClient } from '@libsql/client';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 const globalForPrisma = globalThis as unknown as {
 	prisma: PrismaClient | undefined;
 };
+
+// Get current directory for resolving relative paths
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Create libSQL client for local SQLite file
 const databaseUrl = process.env.DATABASE_URL || 'file:newsboy.db';
@@ -17,13 +23,24 @@ const databaseUrl = process.env.DATABASE_URL || 'file:newsboy.db';
 let libsqlUrl: string;
 if (databaseUrl.startsWith('file:')) {
 	// Extract the path after 'file:'
-	const filePath = databaseUrl.replace(/^file:/, '');
+	let filePath = databaseUrl.replace(/^file:/, '');
 
-	// If it's a relative path, convert to absolute
-	const absolutePath = path.isAbsolute(filePath) ? filePath : path.resolve(filePath);
+	// Remove ./ prefix if present
+	filePath = filePath.replace(/^\.\//, '');
 
-	// libsql needs file:/// (three slashes) for absolute paths
-	libsqlUrl = `file:///${absolutePath.replace(/^\//, '')}`;
+	// Convert to absolute path (relative to project root, not current file)
+	const projectRoot = path.resolve(__dirname, '../../..');
+	const absolutePath = path.isAbsolute(filePath) ? filePath : path.resolve(projectRoot, filePath);
+
+	// libsql expects file:/// for absolute paths
+	// On Unix: file:///home/user/path
+	// On Windows: file:///C:/path
+	const normalizedPath = absolutePath.replace(/\\/g, '/');
+	libsqlUrl = normalizedPath.startsWith('/')
+		? `file://${normalizedPath}`
+		: `file:///${normalizedPath}`;
+
+	console.log('[Prisma] Database URL:', libsqlUrl);
 } else {
 	// Remote URL (e.g., Turso)
 	libsqlUrl = databaseUrl;
