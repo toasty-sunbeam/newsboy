@@ -32,13 +32,9 @@ if (databaseUrl.startsWith('file:')) {
 	const projectRoot = path.resolve(__dirname, '../../..');
 	const absolutePath = path.isAbsolute(filePath) ? filePath : path.resolve(projectRoot, filePath);
 
-	// libsql expects file:/// for absolute paths
-	// On Unix: file:///home/user/path
-	// On Windows: file:///C:/path
-	const normalizedPath = absolutePath.replace(/\\/g, '/');
-	libsqlUrl = normalizedPath.startsWith('/')
-		? `file://${normalizedPath}`
-		: `file:///${normalizedPath}`;
+	// For local SQLite files, libsql requires file: prefix with absolute path
+	// Format: file:/absolute/path (one slash after file:, then absolute path starting with /)
+	libsqlUrl = `file:${absolutePath}`;
 
 	console.log('[Prisma] Database URL:', libsqlUrl);
 } else {
