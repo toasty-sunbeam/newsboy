@@ -4,6 +4,7 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaLibSql } from '@prisma/adapter-libsql';
 import { createClient } from '@libsql/client';
+import path from 'path';
 
 const globalForPrisma = globalThis as unknown as {
 	prisma: PrismaClient | undefined;
@@ -12,11 +13,23 @@ const globalForPrisma = globalThis as unknown as {
 // Create libSQL client for local SQLite file
 const databaseUrl = process.env.DATABASE_URL || 'file:newsboy.db';
 
-// For local files, libsql needs the path without 'file:' prefix
-const isLocalFile = databaseUrl.startsWith('file:');
-const libsql = createClient({
-	url: isLocalFile ? databaseUrl.replace('file:', 'file://') : databaseUrl
-});
+// Convert file: URLs to proper format for libsql
+let libsqlUrl: string;
+if (databaseUrl.startsWith('file:')) {
+	// Extract the path after 'file:'
+	const filePath = databaseUrl.replace(/^file:/, '');
+
+	// If it's a relative path, convert to absolute
+	const absolutePath = path.isAbsolute(filePath) ? filePath : path.resolve(filePath);
+
+	// libsql needs file:/// (three slashes) for absolute paths
+	libsqlUrl = `file:///${absolutePath.replace(/^\//, '')}`;
+} else {
+	// Remote URL (e.g., Turso)
+	libsqlUrl = databaseUrl;
+}
+
+const libsql = createClient({ url: libsqlUrl });
 
 // Create Prisma adapter
 const adapter = new PrismaLibSql(libsql);
