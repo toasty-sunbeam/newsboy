@@ -1,7 +1,7 @@
 // API endpoint for managing RSS sources
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getAllSources } from '$lib/server/opml';
+import { prisma } from '$lib/server/db';
 
 /**
  * GET /api/sources
@@ -9,7 +9,9 @@ import { getAllSources } from '$lib/server/opml';
  */
 export const GET: RequestHandler = async () => {
 	try {
-		const sources = await getAllSources();
+		const sources = await prisma.source.findMany({
+			orderBy: [{ category: 'asc' }, { name: 'asc' }]
+		});
 		return json({ sources });
 	} catch (error) {
 		console.error('Error fetching sources:', error);

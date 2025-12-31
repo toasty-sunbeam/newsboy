@@ -258,10 +258,11 @@
 						<!-- Add Feeds Section -->
 						{#if category.isAdding}
 							<div class="bg-amber-50 p-4 rounded-lg border-2 border-amber-200">
-								<label class="block text-sm font-semibold text-gray-700 mb-2">
+								<label for="feeds-input-{category.name}" class="block text-sm font-semibold text-gray-700 mb-2">
 									Paste RSS feed URLs (one per line):
 								</label>
 								<textarea
+									id="feeds-input-{category.name}"
 									bind:value={category.newFeedsText}
 									placeholder="https://example.com/feed.xml&#10;https://another.com/rss"
 									rows="6"

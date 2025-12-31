@@ -1,7 +1,7 @@
 // API endpoint for individual source management
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { deleteSource, toggleSource } from '$lib/server/opml';
+import { prisma } from '$lib/server/db';
 
 /**
  * DELETE /api/sources/[id]
@@ -9,7 +9,9 @@ import { deleteSource, toggleSource } from '$lib/server/opml';
  */
 export const DELETE: RequestHandler = async ({ params }) => {
 	try {
-		await deleteSource(params.id);
+		await prisma.source.delete({
+			where: { id: params.id }
+		});
 		return json({ success: true, message: 'Source deleted' });
 	} catch (error) {
 		console.error('Error deleting source:', error);
@@ -29,7 +31,10 @@ export const PUT: RequestHandler = async ({ params, request }) => {
 			return json({ error: 'Invalid request: enabled must be a boolean' }, { status: 400 });
 		}
 
-		const source = await toggleSource(params.id, enabled);
+		const source = await prisma.source.update({
+			where: { id: params.id },
+			data: { enabled }
+		});
 		return json({ success: true, source });
 	} catch (error) {
 		console.error('Error updating source:', error);
