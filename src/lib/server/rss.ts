@@ -178,12 +178,18 @@ function parseAtomFeed(xml: string): ParsedFeed {
 
 /**
  * Extract text between XML tags
+ * Handles tags with attributes (e.g., <title type="html"> or <link rel="alternate">)
  */
 function extractText(xml: string, startTag: string, endTag: string): string | undefined {
-	const startIndex = xml.indexOf(startTag);
-	if (startIndex === -1) return undefined;
+	// Build a regex that matches the tag with optional attributes
+	// e.g., <title> or <title type="html"> or <title type='html'>
+	const tagName = startTag.slice(1, -1); // Remove < and > to get tag name
+	const tagRegex = new RegExp(`<${tagName}(?:\\s[^>]*)?>`, 'i');
+	const match = xml.match(tagRegex);
 
-	const contentStart = startIndex + startTag.length;
+	if (!match) return undefined;
+
+	const contentStart = match.index! + match[0].length;
 	const endIndex = xml.indexOf(endTag, contentStart);
 	if (endIndex === -1) return undefined;
 

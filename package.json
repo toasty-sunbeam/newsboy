@@ -6,7 +6,13 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "batch": "bun run src/lib/server/batch.ts"
+    "batch": "bun run src/lib/server/batch.ts",
+    "db:check": "bun run src/lib/server/db-check.ts",
+    "db:check:articles": "bun run src/lib/server/db-check.ts articles",
+    "db:check:sources": "bun run src/lib/server/db-check.ts sources",
+    "db:reset:articles": "bun run src/lib/server/db-reset.ts articles",
+    "db:reset:sources": "bun run src/lib/server/db-reset.ts sources",
+    "db:reset:all": "bun run src/lib/server/db-reset.ts all"
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "^3.0.0",
