@@ -1,6 +1,5 @@
-#!/usr/bin/env bun
 // Nightly batch job: RSS fetching, article storage, scoring, and briefing generation
-// Run with: bun run src/lib/server/batch.ts
+// Run with: bun run batch
 
 import { prisma } from './db';
 import { fetchAndParseFeed, type FeedItem } from './rss';
