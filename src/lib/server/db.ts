@@ -19,23 +19,13 @@ const __dirname = dirname(__filename);
 // Create libSQL client for local SQLite file
 const databaseUrl = process.env.DATABASE_URL || 'file:newsboy.db';
 
-// Convert file: URLs to proper format for libsql
+// For local SQLite files with libsql, use relative path with file: prefix
+// libsql expects: file:path.db for local files (relative to CWD)
 let libsqlUrl: string;
 if (databaseUrl.startsWith('file:')) {
-	// Extract the path after 'file:'
-	let filePath = databaseUrl.replace(/^file:/, '');
-
-	// Remove ./ prefix if present
-	filePath = filePath.replace(/^\.\//, '');
-
-	// Convert to absolute path (relative to project root, not current file)
-	const projectRoot = path.resolve(__dirname, '../../..');
-	const absolutePath = path.isAbsolute(filePath) ? filePath : path.resolve(projectRoot, filePath);
-
-	// For local SQLite files, libsql requires file: prefix with absolute path
-	// Format: file:/absolute/path (one slash after file:, then absolute path starting with /)
-	libsqlUrl = `file:${absolutePath}`;
-
+	// Keep the file: URL as-is for local files
+	// libsql will resolve relative paths from the current working directory
+	libsqlUrl = databaseUrl;
 	console.log('[Prisma] Database URL:', libsqlUrl);
 } else {
 	// Remote URL (e.g., Turso)
