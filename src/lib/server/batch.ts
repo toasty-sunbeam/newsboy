@@ -5,8 +5,8 @@ import { prisma } from './db';
 import { fetchAndParseFeed, type FeedItem } from './rss';
 
 // Drip configuration
-const INITIAL_ARTICLES = 10; // Articles available at first load (hour 0)
-const ARTICLES_PER_HOUR = 2; // Additional articles revealed each hour
+const INITIAL_ARTICLES = 0; // Articles available at midnight (hour 0)
+const ARTICLES_PER_HOUR = 2; // Articles revealed each hour starting at 1 AM
 const MAX_DAILY_ARTICLES = 24; // Maximum articles per day
 
 /**
