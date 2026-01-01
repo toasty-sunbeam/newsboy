@@ -242,10 +242,21 @@ Runs ~5-15 minutes depending on feed count and images needed. All done while you
 - Pip's daily briefing card at the top
 - Date picker or "previous day" nav to browse past briefings
 
-#### 2. Settings
+#### 2. Settings (`/settings`)
+- **Category-based feed management**:
+  - Create custom categories (News, Webcomics, Tech Blogs, etc.)
+  - For each category, paste RSS feed URLs (one per line) into a text box
+  - Bulk import all URLs with a single "Add Feeds" button
+  - View all feeds grouped by category
+  - Toggle feeds on/off or delete them
 - Interest configuration
-- Source management (add/remove feeds)
 - Drip rate adjustment
+
+**Why category-based instead of OPML?**
+- Simpler: No need to export from another app or manage XML files
+- More flexible: Organize feeds as you add them, not as an afterthought
+- Single-user friendly: Just paste URLs and go
+- Better UX: Visual organization by category makes it easy to see what you're subscribed to
 
 #### 3. Conversational Tuning
 - Text input to talk to Pip
@@ -299,7 +310,7 @@ Source
   - name
   - feedUrl: string
   - siteUrl: string
-  - type: 'rss'
+  - category: string              // User-defined category (News, Webcomics, etc.)
   - contentType: 'article' | 'webcomic' | 'mixed'
   - enabled: boolean
 ```
@@ -317,9 +328,10 @@ GET  /api/briefings         # List all past briefings (for browsing)
 POST /api/tune              # Conversational preference adjustment
 GET  /api/tune/history      # Recent tuning adjustments
 
-GET  /api/sources           # Get configured sources (RSS feeds)
-POST /api/sources           # Add new source
-DELETE /api/sources/:id     # Remove source
+GET    /api/sources           # Get configured sources (RSS feeds), grouped by category
+POST   /api/sources/bulk     # Bulk add feeds from pasted URLs (with category)
+DELETE /api/sources/:id      # Remove source
+PUT    /api/sources/:id      # Update source (toggle enabled state)
 
 GET  /api/settings          # Get user settings
 PUT  /api/settings          # Update settings
@@ -328,7 +340,9 @@ PUT  /api/settings          # Update settings
 ## MVP Scope
 
 ### Phase 1: Core Reading Experience
-- [ ] OPML import (export from FreshRSS)
+- [x] **Category-based feed management** (create categories, paste RSS URLs, bulk import)
+- [x] **Database schema** with Source, Article, DailyBriefing, DailySlot, UserPreferences, TuningLog
+- [x] **Settings UI** at `/settings` for managing feeds by category
 - [ ] Midnight batch: RSS feed fetching and processing
 - [ ] Webcomic support (display comic images inline)
 - [ ] Image dimension detection + display mode classification
@@ -367,7 +381,7 @@ PUT  /api/settings          # Update settings
 - **Desktop-first**: No mobile optimization for MVP. Standard responsive web is fine.
 - **RSS-first**: Primary source is RSS feeds (news + webcomics). Other sources can come later.
 - **Content mix**: News articles AND webcomics in the same feed. Webcomics add visual variety and levity.
-- **OPML import**: Feed list exported from FreshRSS.
+- **Feed management**: Category-based system (create categories, paste RSS URLs). No OPML import needed.
 - **Character**: Pip (the newsboy) — pixel art illustrations to be created separately.
 - **Hosting**: Synology DS220+ (existing NAS). Hetzner VPS as fallback.
 - **Runtime**: Bun (fast, modern, good SQLite support).
@@ -572,6 +586,7 @@ model Source {
   name        String
   feedUrl     String    @unique
   siteUrl     String?
+  category    String    @default("Uncategorized") // User-defined category
   contentType String    @default("article") // article | webcomic | mixed
   enabled     Boolean   @default(true)
   createdAt   DateTime  @default(now())
@@ -647,41 +662,50 @@ newsboy/
 ├── docs/
 │   └── DESIGN.md
 ├── prisma/
-│   └── schema.prisma
+│   ├── schema.prisma           # Database schema with driverAdapters
+│   └── prisma.config.ts        # Prisma 7 config
 ├── src/
 │   ├── lib/
 │   │   ├── server/
-│   │   │   ├── batch.ts        # Nightly job orchestration
-│   │   │   ├── rss.ts          # RSS fetch and parse
-│   │   │   ├── scoring.ts      # Article ranking
-│   │   │   ├── replicate.ts    # Crayon generation
-│   │   │   ├── claude.ts       # Briefing + tuning
-│   │   │   └── db.ts           # Prisma client
+│   │   │   ├── batch.ts        # Nightly job orchestration (TODO)
+│   │   │   ├── rss.ts          # RSS fetch and parse (TODO)
+│   │   │   ├── scoring.ts      # Article ranking (TODO)
+│   │   │   ├── replicate.ts    # Crayon generation (TODO)
+│   │   │   ├── claude.ts       # Briefing + tuning (TODO)
+│   │   │   └── db.ts           # Prisma client with libsql adapter
 │   │   └── components/
-│   │       ├── ArticleCard.svelte
-│   │       ├── BriefingCard.svelte
-│   │       ├── CaughtUp.svelte
-│   │       └── TuningInput.svelte
+│   │       ├── ArticleCard.svelte     (TODO)
+│   │       ├── BriefingCard.svelte    (TODO)
+│   │       ├── CaughtUp.svelte        (TODO)
+│   │       └── TuningInput.svelte     (TODO)
 │   └── routes/
-│       ├── +page.svelte        # Main feed
-│       ├── +page.server.ts     # Load today's articles
+│       ├── +page.svelte        # Main feed (welcome page for now)
+│       ├── settings/
+│       │   └── +page.svelte    # Category-based feed management ✅
 │       ├── history/
 │       │   └── [date]/
-│       │       └── +page.svelte
+│       │       └── +page.svelte       (TODO)
 │       └── api/
 │           ├── feed/
-│           │   └── +server.ts
+│           │   └── +server.ts         (TODO)
 │           ├── briefing/
-│           │   ├── +server.ts
+│           │   ├── +server.ts         (TODO)
 │           │   └── [date]/
-│           │       └── +server.ts
+│           │       └── +server.ts     (TODO)
 │           ├── tune/
-│           │   └── +server.ts
+│           │   └── +server.ts         (TODO)
 │           └── sources/
-│               └── +server.ts
+│               ├── +server.ts         # List sources ✅
+│               ├── [id]/
+│               │   └── +server.ts     # Delete/toggle source ✅
+│               └── bulk/
+│                   └── +server.ts     # Bulk add feeds ✅
 ├── static/
 │   └── (Pip illustrations eventually)
 ├── tailwind.config.js
+├── svelte.config.js
+├── vite.config.ts
+├── tsconfig.json
 └── package.json
 ```
 
@@ -756,4 +780,8 @@ export function startNightlyBatch() {
 
 ---
 
-*Document version: 0.6 — Added implementation notes, Prisma schema, file structure, batch pseudocode*
+## Document History
+
+- **v0.7** (2026-01-01): Removed OPML import, added category-based feed management. Updated Phase 1 status to reflect completed tasks: SvelteKit + Prisma 7 initialized, category-based settings UI completed.
+- **v0.6**: Added implementation notes, Prisma schema, file structure, batch pseudocode
+- **Earlier versions**: Initial design document with Pip character, product philosophy, and technical architecture
