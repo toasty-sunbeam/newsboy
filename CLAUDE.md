@@ -27,12 +27,29 @@ src/lib/server/
   rss.ts                 — RSS parsing utilities
   replicate.ts           — Crayon drawing generation
   claude.ts              — Pip's voice (briefings, tuning responses)
+  db.ts                  — Prisma client with libsql adapter
 src/routes/
   +page.svelte           — Main feed UI
+  settings/+page.svelte  — Category-based feed management
   api/feed/+server.ts    — Feed endpoints
   api/briefing/+server.ts — Briefing endpoints
   api/tune/+server.ts    — Conversational tuning
+  api/sources/+server.ts — Source management (list, add, delete, toggle)
+  api/sources/bulk/+server.ts — Bulk feed addition
 ```
+
+## Feed Management
+
+Instead of OPML import, Newsboy uses **category-based feed management**:
+
+1. Create categories (e.g., "News", "Webcomics", "Tech Blogs")
+2. For each category, paste RSS feed URLs (one per line) into a text box
+3. Click "Add Feeds" to bulk-import them into the database
+4. Each feed is stored with its category for organization
+
+This approach is simpler and more flexible than OPML import, allowing you to organize feeds as you add them rather than managing an external OPML file.
+
+**UI Location**: `/settings`
 
 ## Commands
 
@@ -55,14 +72,26 @@ UNSPLASH_ACCESS_KEY="..."
 
 ## Current Status
 
-**Not started.** Ready for Phase 1 implementation.
+**Phase 1: In Progress**
+
+✅ Completed:
+- SvelteKit + Bun + Prisma 7 initialized
+- Database schema created with driverAdapters support
+- Tailwind CSS configured
+- Category-based feed management UI at `/settings`
+- SQLite database connected via libsql adapter
+
+🚧 Next:
+- RSS fetching and article storage
+- Basic two-column feed UI
+- Nightly batch cron
 
 ## Implementation Order
 
 ### Phase 1: Foundation
-1. [ ] Initialize SvelteKit + Prisma + Tailwind
-2. [ ] Create database schema from DESIGN.md
-3. [ ] OPML import function
+1. [x] Initialize SvelteKit + Prisma + Tailwind
+2. [x] Create database schema from DESIGN.md
+3. [x] Category-based feed management (create categories, paste RSS URLs)
 4. [ ] RSS fetching and article storage
 5. [ ] Basic two-column feed UI (all articles, no drip)
 6. [ ] Nightly batch cron (just RSS fetch, no AI yet)

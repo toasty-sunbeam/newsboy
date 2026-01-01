@@ -1,12 +1,12 @@
 // Newsboy Database Schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
 }
 
 model Source {
@@ -14,6 +14,7 @@ model Source {
   name        String
   feedUrl     String    @unique
   siteUrl     String?
+  category    String    @default("Uncategorized") // User-defined category (News, Webcomics, etc.)
   contentType String    @default("article") // article | webcomic | mixed
   enabled     Boolean   @default(true)
   createdAt   DateTime  @default(now())
