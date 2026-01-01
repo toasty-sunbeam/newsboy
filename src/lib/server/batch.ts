@@ -13,13 +13,24 @@ async function main() {
 	console.log(`Time: ${new Date().toISOString()}`);
 
 	try {
-		await fetchAllFeeds();
+		await runBatchJob();
 		console.log('\n=== Batch Job Completed Successfully ===');
 	} catch (error) {
 		console.error('\n=== Batch Job Failed ===');
 		console.error(error);
 		process.exit(1);
 	}
+}
+
+/**
+ * Run the complete batch job workflow
+ */
+async function runBatchJob() {
+	// 1. Fetch all RSS feeds
+	await fetchAllFeeds();
+
+	// 2. Score and select articles for tomorrow
+	await scoreAndScheduleArticles();
 }
 
 /**
@@ -152,9 +163,170 @@ async function storeArticle(
 	}
 }
 
+/**
+ * Score recent articles and schedule them for tomorrow's drip feed
+ */
+async function scoreAndScheduleArticles() {
+	console.log('\n📊 Scoring and scheduling articles...');
+
+	// Get tomorrow's date (normalized to start of day)
+	const tomorrow = new Date();
+	tomorrow.setDate(tomorrow.getDate() + 1);
+	tomorrow.setHours(0, 0, 0, 0);
+
+	// Check if we already have slots for tomorrow
+	const existingSlots = await prisma.dailySlot.findMany({
+		where: {
+			date: tomorrow
+		}
+	});
+
+	if (existingSlots.length > 0) {
+		console.log(`   ⚠️  Already have ${existingSlots.length} slots scheduled for tomorrow. Skipping.`);
+		return;
+	}
+
+	// Get user preferences
+	const prefs = await prisma.userPreferences.findFirst({
+		where: { id: 'default' }
+	});
+
+	// If no preferences exist, create default ones
+	if (!prefs) {
+		await prisma.userPreferences.create({
+			data: {
+				id: 'default',
+				interests: JSON.stringify({
+					technology: 0.8,
+					science: 0.7,
+					maker: 0.6,
+					gaming: 0.5,
+					'good-news': 0.9
+				})
+			}
+		});
+	}
+
+	// Get articles from the last 24 hours that haven't been scheduled yet
+	const yesterday = new Date();
+	yesterday.setDate(yesterday.getDate() - 1);
+
+	const articles = await prisma.article.findMany({
+		where: {
+			fetchedAt: {
+				gte: yesterday
+			},
+			dailySlots: {
+				none: {}
+			}
+		},
+		include: {
+			source: true
+		},
+		orderBy: {
+			fetchedAt: 'desc'
+		}
+	});
+
+	console.log(`   Found ${articles.length} unscheduled articles from last 24 hours`);
+
+	if (articles.length === 0) {
+		console.log('   No new articles to schedule.');
+		return;
+	}
+
+	// Score articles (simple scoring for MVP - will enhance later)
+	const scoredArticles = articles.map(article => ({
+		...article,
+		score: scoreArticle(article, prefs)
+	})).sort((a, b) => b.score - a.score);
+
+	// Select top 24 articles (or fewer if we don't have enough)
+	const selectedCount = Math.min(24, scoredArticles.length);
+	const selected = scoredArticles.slice(0, selectedCount);
+
+	console.log(`   Selected top ${selected.length} articles for tomorrow`);
+
+	// Create daily slots with drip schedule:
+	// - 10 articles at hour 0 (midnight/first load)
+	// - 2 articles per hour for hours 1-7 (14 more articles)
+	const slots = [];
+	let position = 0;
+
+	for (let i = 0; i < selected.length; i++) {
+		let revealHour = 0;
+
+		if (i < 10) {
+			// First 10 articles reveal at midnight
+			revealHour = 0;
+		} else {
+			// Remaining articles drip 2 per hour starting at hour 1
+			const remaining = i - 10;
+			revealHour = Math.floor(remaining / 2) + 1;
+		}
+
+		slots.push({
+			date: tomorrow,
+			articleId: selected[i].id,
+			revealHour,
+			position: position++
+		});
+	}
+
+	// Save all slots
+	await prisma.dailySlot.createMany({
+		data: slots
+	});
+
+	console.log(`   ✅ Created ${slots.length} daily slots for tomorrow`);
+	console.log(`   Distribution: 10 at midnight, then 2/hour until hour ${Math.max(...slots.map(s => s.revealHour))}`);
+
+	// Update relevance scores in the database
+	for (const article of selected) {
+		await prisma.article.update({
+			where: { id: article.id },
+			data: { relevanceScore: article.score }
+		});
+	}
+}
+
+/**
+ * Simple article scoring algorithm
+ * Returns a score between 0 and 100
+ */
+function scoreArticle(article: any, prefs: any): number {
+	let score = 50; // Base score
+
+	// Boost for having images
+	if (article.heroImageUrl) {
+		score += 10;
+	}
+
+	// Recency bonus (articles published in last 12 hours get boost)
+	if (article.publishedAt) {
+		const hoursOld = (Date.now() - new Date(article.publishedAt).getTime()) / (1000 * 60 * 60);
+		if (hoursOld < 12) {
+			score += 15;
+		} else if (hoursOld < 24) {
+			score += 10;
+		}
+	}
+
+	// Webcomics get a small boost (variety)
+	if (article.contentType === 'webcomic') {
+		score += 5;
+	}
+
+	// Source diversity (will enhance this later with actual preference matching)
+	// For now, just add some randomness to prevent same-source clustering
+	score += Math.random() * 10;
+
+	return Math.min(100, Math.max(0, score));
+}
+
 // Run if this file is executed directly
 if (import.meta.main) {
 	main();
 }
 
-export { fetchAllFeeds, storeArticle };
+export { fetchAllFeeds, storeArticle, runBatchJob };

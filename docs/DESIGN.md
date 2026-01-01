@@ -371,8 +371,13 @@ PUT  /api/settings          # Update settings
    - Pip's voice throughout UI
    - Click opens original article in new tab
 
-6. ⏳ **Nightly batch cron (just RSS fetch, no AI yet)**
-   - Next to implement
+6. ✅ **Nightly batch cron (just RSS fetch, no AI yet)**
+   - Simple scheduler runs at midnight every day
+   - Fetches all enabled RSS feeds
+   - Scores articles based on recency, images, content type
+   - Selects top 24 articles
+   - Creates DailySlot entries (10 at hour 0, then 2/hour)
+   - Auto-initializes on server startup via hooks.server.ts
 
 ### Phase 2: Core Features
 7. [ ] Drip logic (10 initial + 2/hour reveal)
@@ -402,7 +407,7 @@ PUT  /api/settings          # Update settings
 - [x] **Two-column masonry UI** with ArticleCard component
 - [x] **Pip persona for system messages** (in UI states and greetings)
 - [x] **Click → open original article in new tab**
-- [ ] Midnight batch: RSS feed fetching cron/scheduler
+- [x] **Midnight batch: RSS feed fetching cron/scheduler**
 - [ ] Webcomic support (display comic images inline)
 - [ ] Image dimension detection + display mode classification
 - [ ] 10 articles at first load, +2 revealed hourly (drip logic)
