@@ -378,7 +378,11 @@ PUT  /api/settings          # Update settings
    - API endpoint at `/api/batch` for status and manual trigger
 
 ### Phase 2: Core Features
-7. [ ] Drip logic (10 initial + 2/hour reveal)
+7. ✅ **Drip logic**
+   - DailySlot creation in batch process (`src/lib/server/batch.ts`)
+   - revealHour filtering in feed API (`src/routes/api/feed/+server.ts`)
+   - Drip status display in frontend with next reveal time
+   - 0 articles at midnight, 2 each hour until 48 total
 8. [ ] "Caught up" state with Unsplash calming imagery
 9. [ ] Crayon drawing generation for image-less articles (Replicate SD 1.5)
 10. [ ] Daily briefing generation (Claude Haiku + Pip voice)
@@ -408,7 +412,7 @@ PUT  /api/settings          # Update settings
 - [x] Midnight batch: RSS feed fetching cron/scheduler
 - [ ] Webcomic support (display comic images inline)
 - [ ] Image dimension detection + display mode classification
-- [ ] 10 articles at first load, +2 revealed hourly (drip logic)
+- [x] **10 articles at first load, +2 revealed hourly (drip logic)**
 - [ ] "Caught up" state with Unsplash calming imagery
 
 ### Phase 2: Pip's Personality Features

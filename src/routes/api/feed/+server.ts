@@ -1,25 +1,89 @@
-// Feed API endpoint - returns all articles (no drip logic for MVP)
+// Feed API endpoint - returns today's articles with drip logic
 import { json } from '@sveltejs/kit';
 import { prisma } from '$lib/server/db';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async ({ url }) => {
 	try {
-		// Fetch all articles with their source information
-		// Sort by publishedAt (newest first), fall back to fetchedAt
-		const articles = await prisma.article.findMany({
+		const currentHour = new Date().getHours();
+
+		// Get today's date at midnight for querying
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+
+		// Check if we have daily slots for today
+		const todaySlots = await prisma.dailySlot.findMany({
+			where: { date: today },
 			include: {
-				source: true
+				article: {
+					include: { source: true }
+				}
 			},
-			orderBy: [
-				{ publishedAt: 'desc' },
-				{ fetchedAt: 'desc' }
-			]
+			orderBy: { position: 'asc' }
 		});
 
+		// If we have slots, use the drip system
+		if (todaySlots.length > 0) {
+			// Filter to only show articles that have been revealed
+			const revealedSlots = todaySlots.filter((slot) => slot.revealHour <= currentHour);
+			const articles = revealedSlots.map((slot) => slot.article);
+
+			// Calculate drip status
+			const totalForToday = todaySlots.length;
+			const revealedCount = revealedSlots.length;
+			const remainingCount = totalForToday - revealedCount;
+
+			// Find the next reveal time
+			const nextSlot = todaySlots.find((slot) => slot.revealHour > currentHour);
+			const nextRevealHour = nextSlot ? nextSlot.revealHour : null;
+			const nextRevealCount = nextSlot
+				? todaySlots.filter((s) => s.revealHour === nextSlot.revealHour).length
+				: 0;
+
+			return json({
+				articles,
+				total: articles.length,
+				drip: {
+					enabled: true,
+					totalForToday,
+					revealedCount,
+					remainingCount,
+					currentHour,
+					nextRevealHour,
+					nextRevealCount
+				}
+			});
+		}
+
+		// Fallback: If no slots exist for today, return all recent articles
+		// This handles the case before the first batch run or for testing
+		const fallbackMode = url.searchParams.get('fallback') !== 'false';
+
+		if (fallbackMode) {
+			const articles = await prisma.article.findMany({
+				include: { source: true },
+				orderBy: [{ publishedAt: 'desc' }, { fetchedAt: 'desc' }],
+				take: 24
+			});
+
+			return json({
+				articles,
+				total: articles.length,
+				drip: {
+					enabled: false,
+					message: 'No daily slots found. Showing recent articles.'
+				}
+			});
+		}
+
+		// If fallback is disabled and no slots exist, return empty
 		return json({
-			articles,
-			total: articles.length
+			articles: [],
+			total: 0,
+			drip: {
+				enabled: false,
+				message: 'No daily slots found for today.'
+			}
 		});
 	} catch (error) {
 		console.error('Error fetching articles:', error);

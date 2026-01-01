@@ -1,7 +1,7 @@
 // Lightweight cron scheduler for nightly batch job
 // Uses native JavaScript timers - no external dependencies needed
 
-import { fetchAllFeeds } from './batch';
+import { fetchAllFeeds, createDailySlotsForTomorrow, createDailySlotsForToday } from './batch';
 
 // Configuration
 const BATCH_HOUR = 0; // Midnight (0-23)
@@ -40,14 +40,23 @@ function shouldRunBatch(): boolean {
 
 /**
  * Run the batch job
+ * @param forToday - If true, create slots for today (useful for manual triggers). Default: create slots for tomorrow.
  */
-async function runBatch(): Promise<void> {
+async function runBatch(forToday = false): Promise<void> {
 	const today = getTodayString();
 
 	console.log(`\n🗞️  Pip's starting his rounds! (${new Date().toISOString()})`);
 
 	try {
 		await fetchAllFeeds();
+
+		// Create daily slots
+		if (forToday) {
+			await createDailySlotsForToday();
+		} else {
+			await createDailySlotsForTomorrow();
+		}
+
 		lastRunDate = today;
 		console.log(`\n🗞️  All done! Pip's having a rest.`);
 	} catch (error) {
@@ -112,10 +121,12 @@ export function stopNightlyBatch(): void {
 
 /**
  * Manually trigger the batch job (for testing or manual runs)
+ * Creates slots for today so articles are immediately visible
  */
 export async function triggerBatchNow(): Promise<void> {
 	console.log('📅 Manual batch trigger requested');
-	await runBatch();
+	// Use forToday=true so articles are immediately visible after manual trigger
+	await runBatch(true);
 }
 
 /**
