@@ -2,6 +2,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getCronStatus, triggerBatchNow } from '$lib/server/cron';
+import { regenerateDailySlotsForToday } from '$lib/server/batch';
 
 /**
  * GET /api/batch - Get cron status
@@ -12,21 +13,38 @@ export const GET: RequestHandler = async () => {
 };
 
 /**
- * POST /api/batch - Manually trigger batch job
+ * POST /api/batch - Manually trigger batch job or regenerate slots
+ * Query params:
+ *   - regenerate=true: Only regenerate today's slots (faster, no RSS fetch)
  */
-export const POST: RequestHandler = async () => {
+export const POST: RequestHandler = async ({ url }) => {
+	const regenerate = url.searchParams.get('regenerate') === 'true';
+
 	try {
-		// Run batch in background (don't await)
+		if (regenerate) {
+			// Just regenerate slots for today (no RSS fetch)
+			const result = await regenerateDailySlotsForToday();
+			return json({
+				success: true,
+				message: `Regenerated feed: ${result.created} articles slotted for today`,
+				...result
+			});
+		}
+
+		// Run full batch in background (don't await)
 		triggerBatchNow().catch(console.error);
 
 		return json({
 			success: true,
-			message: "Batch job started. Check server logs for progress."
+			message: 'Batch job started. Check server logs for progress.'
 		});
 	} catch (error) {
-		return json({
-			success: false,
-			message: error instanceof Error ? error.message : 'Unknown error'
-		}, { status: 500 });
+		return json(
+			{
+				success: false,
+				message: error instanceof Error ? error.message : 'Unknown error'
+			},
+			{ status: 500 }
+		);
 	}
 };

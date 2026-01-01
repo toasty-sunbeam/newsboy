@@ -24,6 +24,8 @@
 	let loading = $state(true);
 	let message = $state('');
 	let messageType: 'success' | 'error' = $state('success');
+	let isRegenerating = $state(false);
+	let isFetchingFeeds = $state(false);
 
 	const DEFAULT_CATEGORIES = ['News', 'Webcomics', 'Science', 'Tech', 'Other'];
 
@@ -170,6 +172,44 @@
 			message = '';
 		}, 5000);
 	}
+
+	async function regenerateFeed() {
+		isRegenerating = true;
+		try {
+			const response = await fetch('/api/batch?regenerate=true', { method: 'POST' });
+			const data = await response.json();
+
+			if (response.ok) {
+				showMessage(data.message, 'success');
+			} else {
+				showMessage(data.message || 'Failed to regenerate feed', 'error');
+			}
+		} catch (error) {
+			console.error('Failed to regenerate feed:', error);
+			showMessage('Failed to regenerate feed', 'error');
+		} finally {
+			isRegenerating = false;
+		}
+	}
+
+	async function fetchFeeds() {
+		isFetchingFeeds = true;
+		try {
+			const response = await fetch('/api/batch', { method: 'POST' });
+			const data = await response.json();
+
+			if (response.ok) {
+				showMessage(data.message, 'success');
+			} else {
+				showMessage(data.message || 'Failed to fetch feeds', 'error');
+			}
+		} catch (error) {
+			console.error('Failed to fetch feeds:', error);
+			showMessage('Failed to fetch feeds', 'error');
+		} finally {
+			isFetchingFeeds = false;
+		}
+	}
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
@@ -194,6 +234,31 @@
 				{message}
 			</div>
 		{/if}
+
+		<!-- Feed Actions -->
+		<div class="mb-8 bg-white rounded-lg shadow-lg p-6 border-4 border-green-200">
+			<h2 class="text-xl font-bold text-gray-800 mb-4">Feed Actions</h2>
+			<div class="flex flex-wrap gap-4">
+				<button
+					onclick={regenerateFeed}
+					disabled={isRegenerating}
+					class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+				>
+					{isRegenerating ? '🔄 Regenerating...' : '🔄 Regenerate Today\'s Feed'}
+				</button>
+				<button
+					onclick={fetchFeeds}
+					disabled={isFetchingFeeds}
+					class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+				>
+					{isFetchingFeeds ? '📰 Fetching...' : '📰 Fetch New Articles'}
+				</button>
+			</div>
+			<p class="text-sm text-gray-500 mt-3">
+				<strong>Regenerate:</strong> Clears today's feed and picks new articles from what's already fetched.<br />
+				<strong>Fetch:</strong> Downloads new articles from all your RSS feeds, then creates today's feed.
+			</p>
+		</div>
 
 		<!-- Loading State -->
 		{#if loading}

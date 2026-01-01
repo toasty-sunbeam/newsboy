@@ -329,9 +329,77 @@ async function createDailySlotsForToday() {
 	console.log(`   ✅ Created ${slots.length} daily slots for today`);
 }
 
+/**
+ * Regenerate daily slots for today (clears existing slots first)
+ */
+async function regenerateDailySlotsForToday() {
+	console.log('\n🔄 Regenerating daily slots for today...');
+
+	// Calculate today's date (midnight)
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+
+	// Delete existing slots for today
+	const deleted = await prisma.dailySlot.deleteMany({
+		where: { date: today }
+	});
+
+	if (deleted.count > 0) {
+		console.log(`   🗑️  Deleted ${deleted.count} existing slots`);
+	}
+
+	// Now create new slots (reuse the existing logic but inline it to avoid the skip check)
+	const slottedArticleIds = await prisma.dailySlot.findMany({
+		select: { articleId: true }
+	});
+	const slottedIds = new Set(slottedArticleIds.map((s) => s.articleId));
+
+	const candidates = await prisma.article.findMany({
+		orderBy: [{ relevanceScore: 'desc' }, { publishedAt: 'desc' }, { fetchedAt: 'desc' }],
+		take: MAX_DAILY_ARTICLES * 2
+	});
+
+	const availableArticles = candidates.filter((a) => !slottedIds.has(a.id));
+	const articlesToSlot = availableArticles.slice(0, MAX_DAILY_ARTICLES);
+
+	if (articlesToSlot.length === 0) {
+		console.log('   ⚠️  No articles available for today');
+		return { deleted: deleted.count, created: 0 };
+	}
+
+	console.log(`   Found ${articlesToSlot.length} articles to slot`);
+
+	const slots: { date: Date; articleId: string; revealHour: number; position: number }[] = [];
+
+	articlesToSlot.forEach((article, index) => {
+		let revealHour: number;
+
+		if (index < INITIAL_ARTICLES) {
+			revealHour = 0;
+		} else {
+			const afterInitial = index - INITIAL_ARTICLES;
+			revealHour = Math.floor(afterInitial / ARTICLES_PER_HOUR) + 1;
+		}
+
+		slots.push({
+			date: today,
+			articleId: article.id,
+			revealHour,
+			position: index
+		});
+	});
+
+	await prisma.dailySlot.createMany({
+		data: slots
+	});
+
+	console.log(`   ✅ Created ${slots.length} new daily slots for today`);
+	return { deleted: deleted.count, created: slots.length };
+}
+
 // Run if this file is executed directly
 if (import.meta.main) {
 	main();
 }
 
-export { fetchAllFeeds, storeArticle, createDailySlotsForTomorrow, createDailySlotsForToday };
+export { fetchAllFeeds, storeArticle, createDailySlotsForTomorrow, createDailySlotsForToday, regenerateDailySlotsForToday };
