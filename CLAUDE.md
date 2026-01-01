@@ -80,10 +80,11 @@ UNSPLASH_ACCESS_KEY="..."
 - Tailwind CSS configured
 - Category-based feed management UI at `/settings`
 - SQLite database connected via libsql adapter
+- RSS/Atom feed parsing (custom implementation)
+- Batch job for fetching and storing articles
 
 🚧 Next:
-- RSS fetching and article storage
-- Basic two-column feed UI
+- Basic two-column feed UI (all articles, no drip)
 - Nightly batch cron
 
 ## Implementation Order
@@ -92,7 +93,7 @@ UNSPLASH_ACCESS_KEY="..."
 1. [x] Initialize SvelteKit + Prisma + Tailwind
 2. [x] Create database schema from DESIGN.md
 3. [x] Category-based feed management (create categories, paste RSS URLs)
-4. [ ] RSS fetching and article storage
+4. [x] RSS fetching and article storage
 5. [ ] Basic two-column feed UI (all articles, no drip)
 6. [ ] Nightly batch cron (just RSS fetch, no AI yet)
 
