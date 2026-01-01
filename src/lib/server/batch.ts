@@ -331,6 +331,7 @@ async function createDailySlotsForToday() {
 
 /**
  * Regenerate daily slots for today (clears existing slots first)
+ * Unlike createDailySlotsForToday, this allows reusing articles from other days
  */
 async function regenerateDailySlotsForToday() {
 	console.log('\n🔄 Regenerating daily slots for today...');
@@ -348,19 +349,14 @@ async function regenerateDailySlotsForToday() {
 		console.log(`   🗑️  Deleted ${deleted.count} existing slots`);
 	}
 
-	// Now create new slots (reuse the existing logic but inline it to avoid the skip check)
-	const slottedArticleIds = await prisma.dailySlot.findMany({
-		select: { articleId: true }
-	});
-	const slottedIds = new Set(slottedArticleIds.map((s) => s.articleId));
-
+	// Get all articles ordered by relevance and recency
+	// For regeneration, we allow reusing articles that may have been slotted for other days
 	const candidates = await prisma.article.findMany({
 		orderBy: [{ relevanceScore: 'desc' }, { publishedAt: 'desc' }, { fetchedAt: 'desc' }],
-		take: MAX_DAILY_ARTICLES * 2
+		take: MAX_DAILY_ARTICLES
 	});
 
-	const availableArticles = candidates.filter((a) => !slottedIds.has(a.id));
-	const articlesToSlot = availableArticles.slice(0, MAX_DAILY_ARTICLES);
+	const articlesToSlot = candidates;
 
 	if (articlesToSlot.length === 0) {
 		console.log('   ⚠️  No articles available for today');
