@@ -7,7 +7,7 @@ import { fetchAndParseFeed, type FeedItem } from './rss';
 // Drip configuration
 const INITIAL_ARTICLES = 0; // Articles available at midnight (hour 0)
 const ARTICLES_PER_HOUR = 2; // Articles revealed each hour starting at 1 AM
-const MAX_DAILY_ARTICLES = 24; // Maximum articles per day
+const MAX_DAILY_ARTICLES = 48; // Maximum articles per day
 
 /**
  * Main batch job entry point
