@@ -71,10 +71,6 @@ newsboy/
 
 **→ See `docs/DESIGN.md` for detailed implementation status and progress tracking.**
 
-Current phase: **Phase 1 (Foundation)** - Step 5 of 6 complete
-
-Next up: Nightly batch cron for automatic RSS fetching
-
 ## Useful Commands
 
 ```bash

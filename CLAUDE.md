@@ -74,16 +74,6 @@ UNSPLASH_ACCESS_KEY="..."
 
 **→ See `docs/DESIGN.md` for the complete implementation status and progress tracking.**
 
-**Current Phase:** Phase 1 (Foundation) - Step 5 of 6 complete
-
-**Recently Completed:**
-- ✅ Basic two-column feed UI with ArticleCard component
-- ✅ Feed API endpoint at `/api/feed`
-- ✅ Responsive masonry grid layout with Pip's voice
-
-**Next Up:**
-- ⏳ Nightly batch cron (automatic RSS fetching on schedule)
-
 ## Pip's Voice
 
 Pip is a cockney Victorian newsboy. Examples:
