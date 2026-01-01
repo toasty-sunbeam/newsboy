@@ -67,14 +67,9 @@ newsboy/
     └── DESIGN.md              # Full product specification
 ```
 
-## Next Steps (Phase 1)
+## Implementation Status
 
-See `CLAUDE.md` for the full implementation order. Next up:
-
-1. [ ] OPML import function
-2. [ ] RSS fetching and article storage
-3. [ ] Basic two-column feed UI (all articles, no drip)
-4. [ ] Nightly batch cron (just RSS fetch, no AI yet)
+**→ See `docs/DESIGN.md` for detailed implementation status and progress tracking.**
 
 ## Useful Commands
 

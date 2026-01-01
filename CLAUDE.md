@@ -70,50 +70,9 @@ REPLICATE_API_TOKEN="r8_..."
 UNSPLASH_ACCESS_KEY="..."
 ```
 
-## Current Status
+## Implementation Status
 
-**Phase 1: In Progress**
-
-✅ Completed:
-- SvelteKit + Bun + Prisma 7 initialized
-- Database schema created with driverAdapters support
-- Tailwind CSS configured
-- Category-based feed management UI at `/settings`
-- SQLite database connected via libsql adapter
-- RSS/Atom feed parsing (custom implementation)
-- Batch job for fetching and storing articles
-
-🚧 Next:
-- Basic two-column feed UI (all articles, no drip)
-- Nightly batch cron
-
-## Implementation Order
-
-### Phase 1: Foundation
-1. [x] Initialize SvelteKit + Prisma + Tailwind
-2. [x] Create database schema from DESIGN.md
-3. [x] Category-based feed management (create categories, paste RSS URLs)
-4. [x] RSS fetching and article storage
-5. [ ] Basic two-column feed UI (all articles, no drip)
-6. [ ] Nightly batch cron (just RSS fetch, no AI yet)
-
-### Phase 2: Core Features  
-7. [ ] Drip logic (10 initial + 2/hour reveal)
-8. [ ] "Caught up" state with Unsplash
-9. [ ] Crayon drawing generation for image-less articles
-10. [ ] Daily briefing generation (Claude Haiku + Pip voice)
-11. [ ] Briefing history browsing
-
-### Phase 3: Conversational Tuning
-12. [ ] Preference profile storage
-13. [ ] Tuning endpoint (parse intent, update prefs)
-14. [ ] Pip-voiced responses
-15. [ ] Apply preferences to article scoring
-
-### Phase 4: Polish
-16. [ ] Settings UI (manage sources, drip rate)
-17. [ ] Error handling and edge cases
-18. [ ] Docker container for NAS deployment
+**→ See `docs/DESIGN.md` for the complete implementation status and progress tracking.**
 
 ## Pip's Voice
 

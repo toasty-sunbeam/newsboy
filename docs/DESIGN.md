@@ -337,20 +337,76 @@ GET  /api/settings          # Get user settings
 PUT  /api/settings          # Update settings
 ```
 
+## Implementation Status
+
+**See this section for current progress. This is the single source of truth for implementation status.**
+
+### Phase 1: Foundation (In Progress)
+
+1. ✅ **Initialize SvelteKit + Prisma + Tailwind**
+   - SvelteKit with Bun runtime configured
+   - Prisma 7 with libsql adapter for SQLite
+   - Tailwind CSS integrated
+
+2. ✅ **Create database schema from DESIGN.md**
+   - 6 models: Source, Article, DailyBriefing, DailySlot, UserPreferences, TuningLog
+   - Full schema with driverAdapters support
+
+3. ✅ **Category-based feed management**
+   - Settings UI at `/settings`
+   - Create categories, paste RSS URLs (bulk import)
+   - List, toggle, delete feeds
+   - API endpoints: `/api/sources`, `/api/sources/bulk`, `/api/sources/[id]`
+
+4. ✅ **RSS fetching and article storage**
+   - Custom RSS/Atom parser implementation
+   - Fetch and store articles with metadata
+   - Batch processing utilities in `src/lib/server/rss.ts` and `src/lib/server/batch.ts`
+
+5. ✅ **Basic two-column feed UI (all articles, no drip)**
+   - Feed API endpoint at `/api/feed`
+   - ArticleCard component with image support
+   - Two-column masonry grid layout (responsive)
+   - Loading, empty, and error states
+   - Pip's voice throughout UI
+   - Click opens original article in new tab
+
+6. ⏳ **Nightly batch cron (just RSS fetch, no AI yet)**
+   - Next to implement
+
+### Phase 2: Core Features
+7. [ ] Drip logic (10 initial + 2/hour reveal)
+8. [ ] "Caught up" state with Unsplash calming imagery
+9. [ ] Crayon drawing generation for image-less articles (Replicate SD 1.5)
+10. [ ] Daily briefing generation (Claude Haiku + Pip voice)
+11. [ ] Briefing history browsing
+
+### Phase 3: Conversational Tuning
+12. [ ] Preference profile storage
+13. [ ] Tuning endpoint (parse intent, update prefs)
+14. [ ] Pip-voiced responses
+15. [ ] Apply preferences to article scoring
+
+### Phase 4: Polish
+16. [ ] Settings UI (manage sources, drip rate)
+17. [ ] Error handling and edge cases
+18. [ ] Docker container for NAS deployment
+
 ## MVP Scope
 
 ### Phase 1: Core Reading Experience
 - [x] **Category-based feed management** (create categories, paste RSS URLs, bulk import)
 - [x] **Database schema** with Source, Article, DailyBriefing, DailySlot, UserPreferences, TuningLog
 - [x] **Settings UI** at `/settings` for managing feeds by category
-- [ ] Midnight batch: RSS feed fetching and processing
+- [x] **RSS fetching and article storage** (custom parser, batch utilities)
+- [x] **Two-column masonry UI** with ArticleCard component
+- [x] **Pip persona for system messages** (in UI states and greetings)
+- [x] **Click → open original article in new tab**
+- [ ] Midnight batch: RSS feed fetching cron/scheduler
 - [ ] Webcomic support (display comic images inline)
 - [ ] Image dimension detection + display mode classification
-- [ ] Two-column masonry UI with multiple card types
-- [ ] 10 articles at first load, +2 revealed hourly
+- [ ] 10 articles at first load, +2 revealed hourly (drip logic)
 - [ ] "Caught up" state with Unsplash calming imagery
-- [ ] Pip persona for system messages
-- [ ] Click → open original article in new tab
 
 ### Phase 2: Pip's Personality Features
 - [ ] Daily briefing: Pip's top 3 picks with cockney summaries
