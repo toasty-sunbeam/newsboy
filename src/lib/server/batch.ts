@@ -4,6 +4,11 @@
 import { prisma } from './db';
 import { fetchAndParseFeed, type FeedItem } from './rss';
 
+// Drip configuration
+const INITIAL_ARTICLES = 10; // Articles available at first load (hour 0)
+const ARTICLES_PER_HOUR = 2; // Additional articles revealed each hour
+const MAX_DAILY_ARTICLES = 24; // Maximum articles per day
+
 /**
  * Main batch job entry point
  */
@@ -13,6 +18,7 @@ async function main() {
 
 	try {
 		await fetchAllFeeds();
+		await createDailySlotsForTomorrow();
 		console.log('\n=== Batch Job Completed Successfully ===');
 	} catch (error) {
 		console.error('\n=== Batch Job Failed ===');
@@ -151,9 +157,181 @@ async function storeArticle(
 	}
 }
 
+/**
+ * Create daily slots for tomorrow's articles
+ * Assigns revealHour based on drip schedule:
+ * - First 10 articles: revealHour = 0 (available immediately)
+ * - Then 2 articles per hour after that
+ */
+async function createDailySlotsForTomorrow() {
+	console.log('\n📅 Creating daily slots for tomorrow...');
+
+	// Calculate tomorrow's date (midnight)
+	const tomorrow = new Date();
+	tomorrow.setDate(tomorrow.getDate() + 1);
+	tomorrow.setHours(0, 0, 0, 0);
+
+	// Check if slots already exist for tomorrow
+	const existingSlots = await prisma.dailySlot.count({
+		where: { date: tomorrow }
+	});
+
+	if (existingSlots > 0) {
+		console.log(`   ⚠️  Slots already exist for ${tomorrow.toDateString()} (${existingSlots} slots)`);
+		console.log('   Skipping slot creation...');
+		return;
+	}
+
+	// Get recent articles that haven't been slotted yet, ordered by relevance and recency
+	// We look at articles from the past 7 days to ensure we have enough content
+	const sevenDaysAgo = new Date();
+	sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+	// Get article IDs that are already in slots
+	const slottedArticleIds = await prisma.dailySlot.findMany({
+		select: { articleId: true }
+	});
+	const slottedIds = new Set(slottedArticleIds.map((s) => s.articleId));
+
+	// Get candidate articles
+	const candidates = await prisma.article.findMany({
+		where: {
+			fetchedAt: { gte: sevenDaysAgo }
+		},
+		orderBy: [{ relevanceScore: 'desc' }, { publishedAt: 'desc' }, { fetchedAt: 'desc' }],
+		take: MAX_DAILY_ARTICLES * 2 // Get extras in case some are already slotted
+	});
+
+	// Filter out already slotted articles
+	const availableArticles = candidates.filter((a) => !slottedIds.has(a.id));
+	const articlesToSlot = availableArticles.slice(0, MAX_DAILY_ARTICLES);
+
+	if (articlesToSlot.length === 0) {
+		console.log('   ⚠️  No new articles available for tomorrow');
+		return;
+	}
+
+	console.log(`   Found ${articlesToSlot.length} articles to slot`);
+
+	// Create slots with drip schedule
+	const slots: { date: Date; articleId: string; revealHour: number; position: number }[] = [];
+
+	articlesToSlot.forEach((article, index) => {
+		let revealHour: number;
+
+		if (index < INITIAL_ARTICLES) {
+			// First 10 articles available at hour 0
+			revealHour = 0;
+		} else {
+			// Remaining articles: 2 per hour starting at hour 1
+			const afterInitial = index - INITIAL_ARTICLES;
+			revealHour = Math.floor(afterInitial / ARTICLES_PER_HOUR) + 1;
+		}
+
+		slots.push({
+			date: tomorrow,
+			articleId: article.id,
+			revealHour,
+			position: index
+		});
+	});
+
+	// Insert all slots
+	await prisma.dailySlot.createMany({
+		data: slots
+	});
+
+	// Log the distribution
+	const hourCounts: Record<number, number> = {};
+	slots.forEach((s) => {
+		hourCounts[s.revealHour] = (hourCounts[s.revealHour] || 0) + 1;
+	});
+
+	console.log('   ✅ Created daily slots with reveal schedule:');
+	Object.entries(hourCounts)
+		.sort(([a], [b]) => Number(a) - Number(b))
+		.forEach(([hour, count]) => {
+			const hourLabel = hour === '0' ? 'midnight' : `${hour}:00`;
+			console.log(`      ${hourLabel}: ${count} article${count > 1 ? 's' : ''}`);
+		});
+}
+
+/**
+ * Create daily slots for today (for manual/testing use)
+ */
+async function createDailySlotsForToday() {
+	console.log('\n📅 Creating daily slots for today...');
+
+	// Calculate today's date (midnight)
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+
+	// Check if slots already exist for today
+	const existingSlots = await prisma.dailySlot.count({
+		where: { date: today }
+	});
+
+	if (existingSlots > 0) {
+		console.log(`   ⚠️  Slots already exist for ${today.toDateString()} (${existingSlots} slots)`);
+		console.log('   Skipping slot creation...');
+		return;
+	}
+
+	// Get article IDs that are already in slots
+	const slottedArticleIds = await prisma.dailySlot.findMany({
+		select: { articleId: true }
+	});
+	const slottedIds = new Set(slottedArticleIds.map((s) => s.articleId));
+
+	// Get all articles ordered by relevance and recency
+	const candidates = await prisma.article.findMany({
+		orderBy: [{ relevanceScore: 'desc' }, { publishedAt: 'desc' }, { fetchedAt: 'desc' }],
+		take: MAX_DAILY_ARTICLES * 2
+	});
+
+	// Filter out already slotted articles
+	const availableArticles = candidates.filter((a) => !slottedIds.has(a.id));
+	const articlesToSlot = availableArticles.slice(0, MAX_DAILY_ARTICLES);
+
+	if (articlesToSlot.length === 0) {
+		console.log('   ⚠️  No articles available for today');
+		return;
+	}
+
+	console.log(`   Found ${articlesToSlot.length} articles to slot`);
+
+	// Create slots with drip schedule
+	const slots: { date: Date; articleId: string; revealHour: number; position: number }[] = [];
+
+	articlesToSlot.forEach((article, index) => {
+		let revealHour: number;
+
+		if (index < INITIAL_ARTICLES) {
+			revealHour = 0;
+		} else {
+			const afterInitial = index - INITIAL_ARTICLES;
+			revealHour = Math.floor(afterInitial / ARTICLES_PER_HOUR) + 1;
+		}
+
+		slots.push({
+			date: today,
+			articleId: article.id,
+			revealHour,
+			position: index
+		});
+	});
+
+	// Insert all slots
+	await prisma.dailySlot.createMany({
+		data: slots
+	});
+
+	console.log(`   ✅ Created ${slots.length} daily slots for today`);
+}
+
 // Run if this file is executed directly
 if (import.meta.main) {
 	main();
 }
 
-export { fetchAllFeeds, storeArticle };
+export { fetchAllFeeds, storeArticle, createDailySlotsForTomorrow, createDailySlotsForToday };

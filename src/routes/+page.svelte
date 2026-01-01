@@ -5,9 +5,43 @@
 
 	type ArticleWithSource = Article & { source: Source };
 
+	type DripStatus = {
+		enabled: boolean;
+		totalForToday?: number;
+		revealedCount?: number;
+		remainingCount?: number;
+		currentHour?: number;
+		nextRevealHour?: number | null;
+		nextRevealCount?: number;
+		message?: string;
+	};
+
 	let articles: ArticleWithSource[] = [];
+	let drip: DripStatus | null = null;
 	let loading = true;
 	let error = '';
+
+	function formatNextRevealTime(hour: number): string {
+		const now = new Date();
+		const revealTime = new Date();
+		revealTime.setHours(hour, 0, 0, 0);
+
+		// If the hour has passed today, it means tomorrow (shouldn't happen with drip logic)
+		if (revealTime <= now) {
+			revealTime.setDate(revealTime.getDate() + 1);
+		}
+
+		// Calculate minutes until reveal
+		const diffMs = revealTime.getTime() - now.getTime();
+		const diffMins = Math.ceil(diffMs / (1000 * 60));
+
+		if (diffMins < 60) {
+			return `about ${diffMins} minute${diffMins === 1 ? '' : 's'}`;
+		}
+
+		// Format as time
+		return revealTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+	}
 
 	onMount(async () => {
 		try {
@@ -16,6 +50,7 @@
 
 			if (response.ok) {
 				articles = data.articles;
+				drip = data.drip || null;
 			} else {
 				error = data.error || 'Failed to load articles';
 			}
@@ -103,11 +138,31 @@
 			<div class="mb-6">
 				<div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-amber-500">
 					<p class="text-lg text-gray-700 italic">
-						"Mornin' gov'nor! I've got <strong>{articles.length}</strong>
-						{articles.length === 1 ? 'story' : 'stories'} for ya today!"
+						{#if drip?.enabled && drip.remainingCount && drip.remainingCount > 0}
+							"Mornin' gov'nor! I've got <strong>{articles.length}</strong>
+							{articles.length === 1 ? 'story' : 'stories'} ready for ya, with
+							<strong>{drip.remainingCount}</strong> more comin' later!"
+						{:else}
+							"Mornin' gov'nor! I've got <strong>{articles.length}</strong>
+							{articles.length === 1 ? 'story' : 'stories'} for ya today!"
+						{/if}
 					</p>
 				</div>
 			</div>
+
+			<!-- Drip status indicator -->
+			{#if drip?.enabled && drip.remainingCount && drip.remainingCount > 0 && drip.nextRevealHour !== null}
+				<div class="mb-6">
+					<div class="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-center gap-2 text-amber-800">
+						<span class="text-lg">⏰</span>
+						<span class="text-sm">
+							{drip.nextRevealCount}
+							{drip.nextRevealCount === 1 ? 'story' : 'stories'} comin' in
+							{formatNextRevealTime(drip.nextRevealHour)}
+						</span>
+					</div>
+				</div>
+			{/if}
 
 			<!-- Two-column masonry grid -->
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-6 auto-rows-auto">
@@ -121,9 +176,20 @@
 			<!-- Footer message -->
 			<div class="mt-12 text-center">
 				<div class="inline-block bg-white rounded-lg shadow-md p-6 border-2 border-amber-200">
-					<p class="text-lg text-gray-700 italic">
-						"That's the lot of it, gov'nor! Have yourself a rest."
-					</p>
+					{#if drip?.enabled && drip.remainingCount && drip.remainingCount > 0}
+						<p class="text-lg text-gray-700 italic">
+							"That's all I've got for now, gov'nor! Come back later for more!"
+						</p>
+						{#if drip.nextRevealHour !== null}
+							<p class="text-sm text-gray-500 mt-2">
+								Next batch: {formatNextRevealTime(drip.nextRevealHour)}
+							</p>
+						{/if}
+					{:else}
+						<p class="text-lg text-gray-700 italic">
+							"That's the lot of it, gov'nor! Have yourself a rest."
+						</p>
+					{/if}
 				</div>
 			</div>
 		{/if}
