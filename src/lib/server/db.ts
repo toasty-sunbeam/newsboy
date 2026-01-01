@@ -3,21 +3,20 @@
 
 import { PrismaClient } from '@prisma/client';
 import { PrismaLibSql } from '@prisma/adapter-libsql';
-import { createClient } from '@libsql/client';
 
 const globalForPrisma = globalThis as unknown as {
 	prisma: PrismaClient | undefined;
 };
 
-// Create libSQL client for local SQLite file
+// Create libSQL adapter for local SQLite file
 const databaseUrl = process.env.DATABASE_URL || 'file:newsboy.db';
 
 console.log('[Prisma] Database URL:', databaseUrl);
 
-const libsql = createClient({ url: databaseUrl });
-
-// Create Prisma adapter
-const adapter = new PrismaLibSql(libsql);
+// Create Prisma adapter (it handles the libsql client internally)
+const adapter = new PrismaLibSql({
+	url: databaseUrl
+});
 
 export const prisma =
 	globalForPrisma.prisma ??
