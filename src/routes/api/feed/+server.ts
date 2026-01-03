@@ -71,13 +71,26 @@ export const GET: RequestHandler = async ({ url }) => {
 				take: 24
 			});
 
+			// Support test mode even in fallback
+			const dripStatus = testCaughtUp
+				? {
+						enabled: true,
+						totalForToday: articles.length,
+						revealedCount: articles.length,
+						remainingCount: 0,
+						currentHour,
+						nextRevealHour: null,
+						nextRevealCount: 0
+				  }
+				: {
+						enabled: false,
+						message: 'No daily slots found. Showing recent articles.'
+				  };
+
 			return json({
 				articles,
 				total: articles.length,
-				drip: {
-					enabled: false,
-					message: 'No daily slots found. Showing recent articles.'
-				}
+				drip: dripStatus
 			});
 		}
 
