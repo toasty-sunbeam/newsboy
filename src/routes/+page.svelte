@@ -253,40 +253,16 @@
 				{/each}
 			</div>
 
-			<!-- Caught up state with message and Unsplash imagery -->
-			{#if isCaughtUp}
-				<!-- Pip's farewell message -->
+			<!-- Footer message for when more articles are coming (not caught up) -->
+			{#if !isCaughtUp && drip?.enabled && drip.remainingCount && drip.remainingCount > 0}
 				<div class="mt-12 text-center">
 					<div class="inline-block bg-white rounded-lg shadow-md p-6 border-2 border-amber-200">
-						<p class="text-2xl text-gray-700 italic mb-3 font-serif">
-							"That's the lot of it, gov'nor! Have yourself a rest."
+						<p class="text-lg text-gray-700 italic">
+							"That's all I've got for now, gov'nor! Come back later for more!"
 						</p>
-						<p class="text-sm text-gray-500">
-							Fresh news in {getTimeUntilTomorrow()}
-						</p>
-					</div>
-				</div>
-
-				<!-- Calming Unsplash image -->
-				<div class="mt-8">
-					<CaughtUp nextRevealHour={drip?.nextRevealHour || null} />
-				</div>
-			{:else}
-				<!-- Footer message for when more articles are coming -->
-				<div class="mt-12 text-center">
-					<div class="inline-block bg-white rounded-lg shadow-md p-6 border-2 border-amber-200">
-						{#if drip?.enabled && drip.remainingCount && drip.remainingCount > 0}
-							<p class="text-lg text-gray-700 italic">
-								"That's all I've got for now, gov'nor! Come back later for more!"
-							</p>
-							{#if drip.nextRevealHour !== null}
-								<p class="text-sm text-gray-500 mt-2">
-									Next batch: {formatNextRevealTime(drip.nextRevealHour)}
-								</p>
-							{/if}
-						{:else}
-							<p class="text-lg text-gray-700 italic">
-								"That's the lot of it, gov'nor! Have yourself a rest."
+						{#if drip.nextRevealHour !== null}
+							<p class="text-sm text-gray-500 mt-2">
+								Next batch: {formatNextRevealTime(drip.nextRevealHour)}
 							</p>
 						{/if}
 					</div>
@@ -294,6 +270,28 @@
 			{/if}
 		{/if}
 	</main>
+
+	<!-- Caught up state - outside container for full width -->
+	{#if !loading && !error && isCaughtUp}
+		<!-- Pip's farewell message -->
+		<div class="container mx-auto px-4 pb-8">
+			<div class="text-center">
+				<div class="inline-block bg-white rounded-lg shadow-md p-6 border-2 border-amber-200">
+					<p class="text-2xl text-gray-700 italic mb-3 font-serif">
+						"That's the lot of it, gov'nor! Have yourself a rest."
+					</p>
+					<p class="text-sm text-gray-500">
+						Fresh news in {getTimeUntilTomorrow()}
+					</p>
+				</div>
+			</div>
+		</div>
+
+		<!-- Calming Unsplash image - full width -->
+		<div class="full-width-image-container">
+			<CaughtUp nextRevealHour={drip?.nextRevealHour || null} />
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -311,6 +309,12 @@
 		background-size: cover;
 		background-position: center;
 		background-repeat: no-repeat;
+	}
+
+	/* Full width image container for caught-up state */
+	.full-width-image-container {
+		width: 100%;
+		margin-top: 2rem;
 	}
 
 	/* Ensure masonry-like behavior on larger screens */

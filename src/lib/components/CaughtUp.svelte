@@ -133,9 +133,7 @@
 	.caught-up-container {
 		min-height: 60vh;
 		position: relative;
-		border-radius: 1rem;
 		overflow: hidden;
-		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
 	}
 
 	.image-background {
