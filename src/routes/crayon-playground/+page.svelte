@@ -57,33 +57,14 @@
 
 	function selectArticle(article: Article) {
 		selectedArticle = article;
-		subject = extractSubject(article.title);
+		subject = article.title
 		prompt = buildPrompt(subject);
 		generatedImageUrl = '';
 		errorMessage = '';
 	}
 
-	function extractSubject(title: string): string {
-		let cleaned = title
-			.replace(/^(The|A|An)\s+/i, '')
-			.replace(/['"]/g, '')
-			.trim();
-
-		const words = cleaned.split(' ');
-		if (words.length <= 5) return cleaned.toLowerCase();
-
-		const truncated = words.slice(0, 5).join(' ');
-		const punctuationIndex = truncated.search(/[:.;,]/);
-
-		if (punctuationIndex > 0) {
-			return truncated.substring(0, punctuationIndex).toLowerCase();
-		}
-
-		return truncated.toLowerCase();
-	}
-
 	function buildPrompt(subj: string): string {
-		return `Childlike crayon drawing of ${subj}, wobbly lines, bright vibrant colors, simple shapes, rough sketch, hand-drawn by a child, on cream paper, innocent and charming, like a Victorian street kid's drawing`;
+		return `Simple childlike crayon sketch of "${subj}", few wobbly lines, mostly uncolored, messy scribbles, stick figures, white paper showing through, imperfect circles, like a 6 year old drew it quickly, not filled in`;
 	}
 
 	function updatePromptFromSubject() {
