@@ -23,6 +23,8 @@
 	let error = '';
 	let isCaughtUp = false;
 	let headerImageUrl = '';
+	let headerImagePhotographer = '';
+	let headerImagePhotoUrl = '';
 
 	function formatNextRevealTime(hour: number): string {
 		const now = new Date();
@@ -97,6 +99,8 @@
 				if (imageResponse.ok) {
 					const imageData = await imageResponse.json();
 					headerImageUrl = imageData.imageUrl;
+					headerImagePhotographer = imageData.photographer;
+					headerImagePhotoUrl = imageData.photoUrl;
 				}
 			} catch (err) {
 				console.error('Failed to load header image:', err);
@@ -139,6 +143,19 @@
 					class="header-image"
 					style="background-image: url('{headerImageUrl}');"
 				></div>
+				{#if headerImagePhotographer && headerImagePhotoUrl}
+					<div class="header-photo-credit">
+						Photo by
+						<a
+							href={headerImagePhotoUrl}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="header-photographer-link"
+						>
+							{headerImagePhotographer}
+						</a>
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</header>
@@ -322,6 +339,27 @@
 		background-size: cover;
 		background-position: center;
 		background-repeat: no-repeat;
+	}
+
+	.header-photo-credit {
+		position: absolute;
+		bottom: 0.5rem;
+		right: 0.5rem;
+		color: rgba(255, 255, 255, 0.95);
+		font-size: 0.75rem;
+		text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+		z-index: 10;
+	}
+
+	.header-photographer-link {
+		color: rgba(255, 255, 255, 0.95);
+		text-decoration: underline;
+		font-weight: 600;
+		transition: color 0.2s;
+	}
+
+	.header-photographer-link:hover {
+		color: #fbbf24;
 	}
 
 	/* Full width image container for caught-up state */

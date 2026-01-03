@@ -8,6 +8,7 @@
 		imageUrl: string;
 		photographer: string;
 		photographerUrl: string;
+		photoUrl: string;
 		description: string;
 		color: string;
 	};
@@ -108,21 +109,12 @@
 			<div class="photo-credit">
 				Photo by
 				<a
-					href="{image.photographerUrl}?utm_source=newsboy&utm_medium=referral"
+					href={image.photoUrl}
 					target="_blank"
 					rel="noopener noreferrer"
 					class="photographer-link"
 				>
 					{image.photographer}
-				</a>
-				on
-				<a
-					href="https://unsplash.com?utm_source=newsboy&utm_medium=referral"
-					target="_blank"
-					rel="noopener noreferrer"
-					class="unsplash-link"
-				>
-					Unsplash
 				</a>
 			</div>
 		</div>
@@ -186,16 +178,14 @@
 		z-index: 20;
 	}
 
-	.photographer-link,
-	.unsplash-link {
+	.photographer-link {
 		color: rgba(255, 255, 255, 0.95);
 		text-decoration: underline;
 		font-weight: 600;
 		transition: color 0.2s;
 	}
 
-	.photographer-link:hover,
-	.unsplash-link:hover {
+	.photographer-link:hover {
 		color: #fbbf24;
 	}
 </style>
