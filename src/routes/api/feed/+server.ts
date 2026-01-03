@@ -7,6 +7,9 @@ export const GET: RequestHandler = async ({ url }) => {
 	try {
 		const currentHour = new Date().getHours();
 
+		// Testing parameter to simulate caught-up state
+		const testCaughtUp = url.searchParams.get('test') === 'caughtup';
+
 		// Get today's date at midnight for querying
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
@@ -24,14 +27,16 @@ export const GET: RequestHandler = async ({ url }) => {
 
 		// If we have slots, use the drip system
 		if (todaySlots.length > 0) {
-			// Filter to only show articles that have been revealed
-			const revealedSlots = todaySlots.filter((slot) => slot.revealHour <= currentHour);
+			// Filter to only show articles that have been revealed (or all if testing)
+			const revealedSlots = testCaughtUp
+				? todaySlots
+				: todaySlots.filter((slot) => slot.revealHour <= currentHour);
 			const articles = revealedSlots.map((slot) => slot.article);
 
 			// Calculate drip status
 			const totalForToday = todaySlots.length;
 			const revealedCount = revealedSlots.length;
-			const remainingCount = totalForToday - revealedCount;
+			const remainingCount = testCaughtUp ? 0 : totalForToday - revealedCount;
 
 			// Find the next reveal time
 			const nextSlot = todaySlots.find((slot) => slot.revealHour > currentHour);
@@ -49,7 +54,7 @@ export const GET: RequestHandler = async ({ url }) => {
 					revealedCount,
 					remainingCount,
 					currentHour,
-					nextRevealHour,
+					nextRevealHour: testCaughtUp ? null : nextRevealHour,
 					nextRevealCount
 				}
 			});
