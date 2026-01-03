@@ -98,9 +98,8 @@ Beautiful, calming images frame the reading experience:
 - **Footer image**: Full-width Unsplash photo at bottom after articles (60vh height)
 - **Always present**: Images displayed whenever articles exist, not just when caught up
 - **Image sources**: Unsplash API pulls from nature, landscapes, architecture, minimal, and space categories
-- **Pip's adaptive messages**:
-  - When caught up: "That's the lot of it, gov'nor! Have yourself a rest." + countdown to tomorrow
-  - When more coming: "That's all I've got for now, gov'nor! Come back later for more!" + next reveal time
+- **Pip's message**: "That's all for now, gov'nor! Have yourself a rest."
+  - Timing adapts: "I'll be back with fresh news in X hours" (tomorrow) or "I'll be back with more stories in X minutes" (later today)
 - **Photo credits**: Attribution links for Unsplash photographers
 - **No anxiety, no FOMO**: Visual richness and calming imagery create a satisfying endpoint
 
@@ -393,9 +392,8 @@ PUT  /api/settings          # Update settings
    - Footer image: Full-width Unsplash photo at bottom, after all articles (60vh height)
    - Images displayed ALL THE TIME when articles are present, not just when caught up
    - CaughtUp component (`src/lib/components/CaughtUp.svelte`) displays footer image
-   - Pip's message adapts based on state:
-     - Caught up: "That's the lot of it, gov'nor! Have yourself a rest." + countdown to tomorrow
-     - More coming: "That's all I've got for now, gov'nor! Come back later for more!" + next reveal time
+   - Pip's message: "That's all for now, gov'nor! Have yourself a rest."
+   - Timing adapts: "I'll be back with fresh news in X hours" (tomorrow) or "I'll be back with more stories in X minutes" (later today)
    - Photo credits with Unsplash attribution links
    - Edge-to-edge full-width design for maximum visual impact
    - Test mode: Add `?test=caughtup` to URL to simulate caught-up state

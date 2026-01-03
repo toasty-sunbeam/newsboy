@@ -262,28 +262,23 @@
 		<div class="container mx-auto px-4 pb-8">
 			<div class="text-center">
 				<div class="inline-block bg-white rounded-lg shadow-md p-6 border-2 border-amber-200">
+					<p class="text-2xl text-gray-700 italic mb-3 font-serif">
+						"That's all for now, gov'nor! Have yourself a rest."
+					</p>
 					{#if isCaughtUp}
-						<!-- Caught up: all done for the day -->
-						<p class="text-2xl text-gray-700 italic mb-3 font-serif">
-							"That's the lot of it, gov'nor! Have yourself a rest."
-						</p>
+						<!-- All done for today - next batch is tomorrow -->
 						<p class="text-sm text-gray-500">
-							Fresh news in {getTimeUntilTomorrow()}
+							I'll be back with fresh news in {getTimeUntilTomorrow()}
 						</p>
-					{:else if drip?.enabled && drip.remainingCount && drip.remainingCount > 0}
+					{:else if drip?.enabled && drip.remainingCount && drip.remainingCount > 0 && drip.nextRevealHour !== null}
 						<!-- More coming later today -->
-						<p class="text-lg text-gray-700 italic">
-							"That's all I've got for now, gov'nor! Come back later for more!"
+						<p class="text-sm text-gray-500">
+							I'll be back with more stories in {formatNextRevealTime(drip.nextRevealHour)}
 						</p>
-						{#if drip.nextRevealHour !== null}
-							<p class="text-sm text-gray-500 mt-2">
-								Next batch: {formatNextRevealTime(drip.nextRevealHour)}
-							</p>
-						{/if}
 					{:else}
-						<!-- Fallback message -->
-						<p class="text-lg text-gray-700 italic">
-							"That's all for now, gov'nor!"
+						<!-- Fallback -->
+						<p class="text-sm text-gray-500">
+							Check back soon for more!
 						</p>
 					{/if}
 				</div>
