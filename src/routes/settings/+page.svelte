@@ -240,7 +240,12 @@
 	<div class="container mx-auto px-4 py-8">
 		<!-- Header -->
 		<div class="mb-8">
-			<a href="/" class="text-amber-700 hover:text-amber-900 mb-4 inline-block">← Back to Feed</a>
+			<div class="flex items-center justify-between mb-4">
+				<a href="/" class="text-amber-700 hover:text-amber-900 inline-block">← Back to Feed</a>
+				<a href="/crayon-playground" class="text-purple-700 hover:text-purple-900 inline-block">
+					🖍️ Crayon Playground →
+				</a>
+			</div>
 			<h1 class="text-4xl font-bold text-gray-800">Feed Settings</h1>
 			<p class="text-gray-600 mt-2 font-serif italic">
 				"Right then, let's get yer feeds sorted by category, gov'nor!"
