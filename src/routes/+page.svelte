@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import ArticleCard from '$lib/components/ArticleCard.svelte';
+	import CaughtUp from '$lib/components/CaughtUp.svelte';
 	import type { Article, Source } from '@prisma/client';
 
 	type ArticleWithSource = Article & { source: Source };
@@ -20,6 +21,7 @@
 	let drip: DripStatus | null = null;
 	let loading = true;
 	let error = '';
+	let isCaughtUp = false;
 
 	function formatNextRevealTime(hour: number): string {
 		const now = new Date();
@@ -51,6 +53,10 @@
 			if (response.ok) {
 				articles = data.articles;
 				drip = data.drip || null;
+
+				// Check if user is caught up (has articles and no more remaining)
+				isCaughtUp =
+					articles.length > 0 && drip?.enabled && drip.remainingCount !== undefined && drip.remainingCount === 0;
 			} else {
 				error = data.error || 'Failed to load articles';
 			}
@@ -173,25 +179,32 @@
 				{/each}
 			</div>
 
-			<!-- Footer message -->
-			<div class="mt-12 text-center">
-				<div class="inline-block bg-white rounded-lg shadow-md p-6 border-2 border-amber-200">
-					{#if drip?.enabled && drip.remainingCount && drip.remainingCount > 0}
-						<p class="text-lg text-gray-700 italic">
-							"That's all I've got for now, gov'nor! Come back later for more!"
-						</p>
-						{#if drip.nextRevealHour !== null}
-							<p class="text-sm text-gray-500 mt-2">
-								Next batch: {formatNextRevealTime(drip.nextRevealHour)}
+			<!-- Caught up state with Unsplash imagery -->
+			{#if isCaughtUp}
+				<div class="mt-12">
+					<CaughtUp nextRevealHour={null} />
+				</div>
+			{:else}
+				<!-- Footer message for when more articles are coming -->
+				<div class="mt-12 text-center">
+					<div class="inline-block bg-white rounded-lg shadow-md p-6 border-2 border-amber-200">
+						{#if drip?.enabled && drip.remainingCount && drip.remainingCount > 0}
+							<p class="text-lg text-gray-700 italic">
+								"That's all I've got for now, gov'nor! Come back later for more!"
+							</p>
+							{#if drip.nextRevealHour !== null}
+								<p class="text-sm text-gray-500 mt-2">
+									Next batch: {formatNextRevealTime(drip.nextRevealHour)}
+								</p>
+							{/if}
+						{:else}
+							<p class="text-lg text-gray-700 italic">
+								"That's the lot of it, gov'nor! Have yourself a rest."
 							</p>
 						{/if}
-					{:else}
-						<p class="text-lg text-gray-700 italic">
-							"That's the lot of it, gov'nor! Have yourself a rest."
-						</p>
-					{/if}
+					</div>
 				</div>
-			</div>
+			{/if}
 		{/if}
 	</main>
 </div>

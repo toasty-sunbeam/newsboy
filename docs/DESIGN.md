@@ -383,7 +383,12 @@ PUT  /api/settings          # Update settings
    - revealHour filtering in feed API (`src/routes/api/feed/+server.ts`)
    - Drip status display in frontend with next reveal time
    - 0 articles at midnight, 2 each hour until 48 total
-8. [ ] "Caught up" state with Unsplash calming imagery
+8. ✅ **"Caught up" state with Unsplash calming imagery**
+   - Unsplash API endpoint (`src/routes/api/unsplash/+server.ts`)
+   - CaughtUp component with beautiful background images (`src/lib/components/CaughtUp.svelte`)
+   - Displays when all daily articles are revealed (remainingCount === 0)
+   - Shows Pip's message: "That's the lot of it, gov'nor! Have yourself a rest."
+   - Photo credits for Unsplash photographers
 9. [ ] Crayon drawing generation for image-less articles (Replicate SD 1.5)
 10. [ ] Daily briefing generation (Claude Haiku + Pip voice)
 11. [ ] Briefing history browsing
