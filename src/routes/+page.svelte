@@ -47,7 +47,12 @@
 
 	onMount(async () => {
 		try {
-			const response = await fetch('/api/feed');
+			// Check if we're in test mode
+			const urlParams = new URLSearchParams(window.location.search);
+			const testMode = urlParams.get('test');
+
+			const apiUrl = testMode ? `/api/feed?test=${testMode}` : '/api/feed';
+			const response = await fetch(apiUrl);
 			const data = await response.json();
 
 			if (response.ok) {
@@ -57,6 +62,13 @@
 				// Check if user is caught up (has articles and no more remaining)
 				isCaughtUp =
 					articles.length > 0 && drip?.enabled && drip.remainingCount !== undefined && drip.remainingCount === 0;
+
+				// Debug logging
+				console.log('Feed loaded:', {
+					articlesCount: articles.length,
+					drip,
+					isCaughtUp
+				});
 			} else {
 				error = data.error || 'Failed to load articles';
 			}
@@ -138,9 +150,32 @@
 						</ol>
 					</div>
 				</div>
+
+				<!-- Debug info -->
+				{#if drip}
+					<div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 text-left text-sm">
+						<p class="font-semibold mb-2">Debug Info:</p>
+						<pre class="text-xs overflow-auto">{JSON.stringify({ drip, isCaughtUp }, null, 2)}</pre>
+					</div>
+				{/if}
 			</div>
 		{:else}
 			<!-- Feed with articles -->
+			<!-- Debug info (top of feed) -->
+			<div class="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4 text-left text-sm">
+				<p class="font-semibold mb-2">🔍 Debug Info:</p>
+				<pre class="text-xs overflow-auto">{JSON.stringify(
+					{
+						articlesCount: articles.length,
+						drip,
+						isCaughtUp,
+						testUrl: '/?test=caughtup'
+					},
+					null,
+					2
+				)}</pre>
+			</div>
+
 			<div class="mb-6">
 				<div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-amber-500">
 					<p class="text-lg text-gray-700 italic">
