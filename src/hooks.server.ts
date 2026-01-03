@@ -1,6 +1,9 @@
 // SvelteKit server hooks
 // This file runs when the server starts
 
+// Load environment variables from .env into process.env during dev/start
+import 'dotenv/config';
+
 import { startNightlyBatch } from '$lib/server/cron';
 
 // Start the nightly batch cron scheduler
