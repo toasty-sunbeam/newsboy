@@ -39,6 +39,7 @@ export const GET: RequestHandler = async () => {
 			imageUrlThumb: data.urls.thumb,
 			photographer: data.user.name,
 			photographerUrl: data.user.links.html,
+			photoUrl: data.links.html,
 			downloadUrl: data.links.download_location,
 			description: data.description || data.alt_description || 'A calming image',
 			color: data.color
