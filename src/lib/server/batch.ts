@@ -10,6 +10,16 @@ const INITIAL_ARTICLES = 0; // Articles available at midnight (hour 0)
 const ARTICLES_PER_HOUR = 2; // Articles revealed each hour starting at 1 AM
 const MAX_DAILY_ARTICLES = 48; // Maximum articles per day
 
+// Crayon generation configuration
+const CRAYON_DELAY_MS = 2000; // Delay between image generation requests to avoid rate limiting
+
+/**
+ * Sleep for a specified number of milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 /**
  * Main batch job entry point
  */
@@ -433,13 +443,15 @@ async function generateCrayonDrawingsForTomorrow() {
 	}
 
 	console.log(`   Found ${articlesNeedingCrayons.length} article${articlesNeedingCrayons.length > 1 ? 's' : ''} needing crayon drawings`);
+	console.log(`   ⏱️  Processing with ${CRAYON_DELAY_MS}ms delay between requests to avoid rate limiting`);
 
 	let successCount = 0;
 	let failureCount = 0;
 
 	// Generate crayon drawing for each article
-	for (const article of articlesNeedingCrayons) {
-		console.log(`\n   📰 "${article.title.substring(0, 60)}${article.title.length > 60 ? '...' : ''}"`);
+	for (let i = 0; i < articlesNeedingCrayons.length; i++) {
+		const article = articlesNeedingCrayons[i];
+		console.log(`\n   📰 [${i + 1}/${articlesNeedingCrayons.length}] "${article.title.substring(0, 60)}${article.title.length > 60 ? '...' : ''}"`);
 
 		const crayonUrl = await generateCrayonDrawing(article.title);
 
@@ -456,6 +468,12 @@ async function generateCrayonDrawingsForTomorrow() {
 		} else {
 			console.log('   ⚠️  Failed to generate crayon drawing, article will display without image');
 			failureCount++;
+		}
+
+		// Add delay between requests (except after the last one)
+		if (i < articlesNeedingCrayons.length - 1) {
+			console.log(`   ⏳ Waiting ${CRAYON_DELAY_MS}ms before next request...`);
+			await sleep(CRAYON_DELAY_MS);
 		}
 	}
 
@@ -497,11 +515,13 @@ async function generateCrayonDrawingsForToday() {
 	}
 
 	console.log(`   Found ${articlesNeedingCrayons.length} article${articlesNeedingCrayons.length > 1 ? 's' : ''} needing crayon drawings`);
+	console.log(`   ⏱️  Processing with ${CRAYON_DELAY_MS}ms delay between requests to avoid rate limiting`);
 
 	let successCount = 0;
 
-	for (const article of articlesNeedingCrayons) {
-		console.log(`\n   📰 "${article.title.substring(0, 60)}${article.title.length > 60 ? '...' : ''}"`);
+	for (let i = 0; i < articlesNeedingCrayons.length; i++) {
+		const article = articlesNeedingCrayons[i];
+		console.log(`\n   📰 [${i + 1}/${articlesNeedingCrayons.length}] "${article.title.substring(0, 60)}${article.title.length > 60 ? '...' : ''}"`);
 
 		const crayonUrl = await generateCrayonDrawing(article.title);
 
@@ -514,6 +534,12 @@ async function generateCrayonDrawingsForToday() {
 				}
 			});
 			successCount++;
+		}
+
+		// Add delay between requests (except after the last one)
+		if (i < articlesNeedingCrayons.length - 1) {
+			console.log(`   ⏳ Waiting ${CRAYON_DELAY_MS}ms before next request...`);
+			await sleep(CRAYON_DELAY_MS);
 		}
 	}
 
