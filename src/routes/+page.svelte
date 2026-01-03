@@ -253,10 +253,25 @@
 				{/each}
 			</div>
 
-			<!-- Footer message for when more articles are coming (not caught up) -->
-			{#if !isCaughtUp && drip?.enabled && drip.remainingCount && drip.remainingCount > 0}
-				<div class="mt-12 text-center">
-					<div class="inline-block bg-white rounded-lg shadow-md p-6 border-2 border-amber-200">
+		{/if}
+	</main>
+
+	<!-- Footer message and calming image - always shown when articles exist -->
+	{#if !loading && !error && articles.length > 0}
+		<!-- Pip's message -->
+		<div class="container mx-auto px-4 pb-8">
+			<div class="text-center">
+				<div class="inline-block bg-white rounded-lg shadow-md p-6 border-2 border-amber-200">
+					{#if isCaughtUp}
+						<!-- Caught up: all done for the day -->
+						<p class="text-2xl text-gray-700 italic mb-3 font-serif">
+							"That's the lot of it, gov'nor! Have yourself a rest."
+						</p>
+						<p class="text-sm text-gray-500">
+							Fresh news in {getTimeUntilTomorrow()}
+						</p>
+					{:else if drip?.enabled && drip.remainingCount && drip.remainingCount > 0}
+						<!-- More coming later today -->
 						<p class="text-lg text-gray-700 italic">
 							"That's all I've got for now, gov'nor! Come back later for more!"
 						</p>
@@ -265,29 +280,17 @@
 								Next batch: {formatNextRevealTime(drip.nextRevealHour)}
 							</p>
 						{/if}
-					</div>
-				</div>
-			{/if}
-		{/if}
-	</main>
-
-	<!-- Caught up state - outside container for full width -->
-	{#if !loading && !error && isCaughtUp}
-		<!-- Pip's farewell message -->
-		<div class="container mx-auto px-4 pb-8">
-			<div class="text-center">
-				<div class="inline-block bg-white rounded-lg shadow-md p-6 border-2 border-amber-200">
-					<p class="text-2xl text-gray-700 italic mb-3 font-serif">
-						"That's the lot of it, gov'nor! Have yourself a rest."
-					</p>
-					<p class="text-sm text-gray-500">
-						Fresh news in {getTimeUntilTomorrow()}
-					</p>
+					{:else}
+						<!-- Fallback message -->
+						<p class="text-lg text-gray-700 italic">
+							"That's all for now, gov'nor!"
+						</p>
+					{/if}
 				</div>
 			</div>
 		</div>
 
-		<!-- Calming Unsplash image - full width -->
+		<!-- Calming Unsplash image - full width, always shown -->
 		<div class="full-width-image-container">
 			<CaughtUp nextRevealHour={drip?.nextRevealHour || null} />
 		</div>
