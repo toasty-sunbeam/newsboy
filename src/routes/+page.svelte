@@ -22,6 +22,7 @@
 	let loading = true;
 	let error = '';
 	let isCaughtUp = false;
+	let headerImageUrl = '';
 
 	function formatNextRevealTime(hour: number): string {
 		const now = new Date();
@@ -43,6 +44,23 @@
 
 		// Format as time
 		return revealTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+	}
+
+	function getTimeUntilTomorrow(): string {
+		const now = new Date();
+		const tomorrow = new Date();
+		tomorrow.setDate(tomorrow.getDate() + 1);
+		tomorrow.setHours(0, 0, 0, 0);
+
+		const diffMs = tomorrow.getTime() - now.getTime();
+		const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+		const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+		if (diffHours > 0) {
+			return `${diffHours} hour${diffHours === 1 ? '' : 's'} and ${diffMins} minute${diffMins === 1 ? '' : 's'}`;
+		} else {
+			return `${diffMins} minute${diffMins === 1 ? '' : 's'}`;
+		}
 	}
 
 	onMount(async () => {
@@ -71,6 +89,17 @@
 				});
 			} else {
 				error = data.error || 'Failed to load articles';
+			}
+
+			// Fetch header image
+			try {
+				const imageResponse = await fetch('/api/unsplash');
+				if (imageResponse.ok) {
+					const imageData = await imageResponse.json();
+					headerImageUrl = imageData.imageUrl;
+				}
+			} catch (err) {
+				console.error('Failed to load header image:', err);
 			}
 		} catch (err) {
 			error = 'Failed to connect to server';
@@ -102,6 +131,16 @@
 				</nav>
 			</div>
 		</div>
+
+		<!-- Header Image -->
+		{#if headerImageUrl && !loading}
+			<div class="header-image-container">
+				<div
+					class="header-image"
+					style="background-image: url('{headerImageUrl}');"
+				></div>
+			</div>
+		{/if}
 	</header>
 
 	<!-- Main content -->
@@ -214,10 +253,23 @@
 				{/each}
 			</div>
 
-			<!-- Caught up state with Unsplash imagery -->
+			<!-- Caught up state with message and Unsplash imagery -->
 			{#if isCaughtUp}
-				<div class="mt-12">
-					<CaughtUp nextRevealHour={null} />
+				<!-- Pip's farewell message -->
+				<div class="mt-12 text-center">
+					<div class="inline-block bg-white rounded-lg shadow-md p-6 border-2 border-amber-200">
+						<p class="text-2xl text-gray-700 italic mb-3 font-serif">
+							"That's the lot of it, gov'nor! Have yourself a rest."
+						</p>
+						<p class="text-sm text-gray-500">
+							Fresh news in {getTimeUntilTomorrow()}
+						</p>
+					</div>
+				</div>
+
+				<!-- Calming Unsplash image -->
+				<div class="mt-8">
+					<CaughtUp nextRevealHour={drip?.nextRevealHour || null} />
 				</div>
 			{:else}
 				<!-- Footer message for when more articles are coming -->
@@ -245,10 +297,30 @@
 </div>
 
 <style>
+	/* Header image */
+	.header-image-container {
+		width: 100%;
+		height: 200px;
+		overflow: hidden;
+		position: relative;
+	}
+
+	.header-image {
+		width: 100%;
+		height: 100%;
+		background-size: cover;
+		background-position: center;
+		background-repeat: no-repeat;
+	}
+
 	/* Ensure masonry-like behavior on larger screens */
 	@media (min-width: 768px) {
 		.grid {
 			grid-auto-flow: dense;
+		}
+
+		.header-image-container {
+			height: 300px;
 		}
 	}
 </style>

@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 
 	export let nextRevealHour: number | null = null;
+	export let showMessage: boolean = true; // Control whether to show the message box
 
 	type UnsplashImage = {
 		imageUrl: string;
@@ -44,6 +45,23 @@
 		}
 	}
 
+	function getTimeUntilTomorrow(): string {
+		const now = new Date();
+		const tomorrow = new Date();
+		tomorrow.setDate(tomorrow.getDate() + 1);
+		tomorrow.setHours(0, 0, 0, 0);
+
+		const diffMs = tomorrow.getTime() - now.getTime();
+		const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+		const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+		if (diffHours > 0) {
+			return `${diffHours} hour${diffHours === 1 ? '' : 's'} and ${diffMins} minute${diffMins === 1 ? '' : 's'}`;
+		} else {
+			return `${diffMins} minute${diffMins === 1 ? '' : 's'}`;
+		}
+	}
+
 	onMount(async () => {
 		try {
 			const response = await fetch('/api/unsplash');
@@ -66,73 +84,46 @@
 <div class="caught-up-container">
 	{#if loading}
 		<!-- Loading state -->
-		<div class="message-overlay">
-			<div class="message-card loading-card">
+		<div class="gradient-background">
+			<div class="loading-overlay">
 				<div class="text-6xl mb-4">✨</div>
-				<p class="text-xl text-gray-600 italic">Loading a calming view...</p>
+				<p class="text-xl text-white italic">Loading a calming view...</p>
 			</div>
 		</div>
 	{:else if error}
-		<!-- Error fallback - still show the message but with a gentle gradient background -->
+		<!-- Error fallback - show gradient background -->
 		<div class="gradient-background">
-			<div class="message-overlay">
-				<div class="message-card">
-					<div class="text-8xl mb-6">🌅</div>
-					<p class="pip-message">"That's the lot of it, gov'nor! Have yourself a rest."</p>
-					{#if nextRevealHour !== null}
-						<p class="next-reveal-text">
-							I'll be back with more stories in {formatNextRevealTime(nextRevealHour)}.
-						</p>
-					{:else}
-						<p class="next-reveal-text">Check back tomorrow for fresh news!</p>
-					{/if}
-				</div>
-			</div>
+			<div class="photo-credit-error">Beautiful view coming soon...</div>
 		</div>
 	{:else if image}
-		<!-- Beautiful Unsplash image background -->
+		<!-- Beautiful Unsplash image background - full visibility, no overlay message -->
 		<div
 			class="image-background"
 			style="background-image: url('{image.imageUrl}'); background-color: {image.color};"
 		>
-			<!-- Overlay to make text readable -->
-			<div class="image-overlay"></div>
+			<!-- Subtle gradient for photo credit readability -->
+			<div class="subtle-overlay"></div>
 
-			<!-- Message content -->
-			<div class="message-overlay">
-				<div class="message-card">
-					<div class="text-8xl mb-6">🗞️</div>
-					<p class="pip-message">"That's the lot of it, gov'nor! Have yourself a rest."</p>
-					{#if nextRevealHour !== null}
-						<p class="next-reveal-text">
-							I'll be back with more stories in {formatNextRevealTime(nextRevealHour)}.
-						</p>
-					{:else}
-						<p class="next-reveal-text">Check back tomorrow for fresh news!</p>
-					{/if}
-				</div>
-
-				<!-- Photo credit -->
-				<div class="photo-credit">
-					Photo by
-					<a
-						href="{image.photographerUrl}?utm_source=newsboy&utm_medium=referral"
-						target="_blank"
-						rel="noopener noreferrer"
-						class="photographer-link"
-					>
-						{image.photographer}
-					</a>
-					on
-					<a
-						href="https://unsplash.com?utm_source=newsboy&utm_medium=referral"
-						target="_blank"
-						rel="noopener noreferrer"
-						class="unsplash-link"
-					>
-						Unsplash
-					</a>
-				</div>
+			<!-- Photo credit -->
+			<div class="photo-credit">
+				Photo by
+				<a
+					href="{image.photographerUrl}?utm_source=newsboy&utm_medium=referral"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="photographer-link"
+				>
+					{image.photographer}
+				</a>
+				on
+				<a
+					href="https://unsplash.com?utm_source=newsboy&utm_medium=referral"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="unsplash-link"
+				>
+					Unsplash
+				</a>
 			</div>
 		</div>
 	{/if}
@@ -140,7 +131,7 @@
 
 <style>
 	.caught-up-container {
-		min-height: 70vh;
+		min-height: 60vh;
 		position: relative;
 		border-radius: 1rem;
 		overflow: hidden;
@@ -161,60 +152,39 @@
 		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 	}
 
-	.image-overlay {
+	.subtle-overlay {
 		position: absolute;
 		inset: 0;
-		background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5));
+		background: linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.2));
 	}
 
-	.message-overlay {
+	.loading-overlay {
 		position: relative;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		min-height: 70vh;
-		padding: 2rem;
+		min-height: 60vh;
 		z-index: 10;
-	}
-
-	.message-card {
-		background: rgba(255, 255, 255, 0.95);
-		backdrop-filter: blur(10px);
-		padding: 3rem 2.5rem;
-		border-radius: 1.5rem;
-		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-		text-align: center;
-		max-width: 600px;
-		border: 3px solid rgba(251, 191, 36, 0.5);
-	}
-
-	.loading-card {
-		border-color: rgba(156, 163, 175, 0.3);
-	}
-
-	.pip-message {
-		font-size: 2rem;
-		font-style: italic;
-		color: #374151;
-		margin-bottom: 1.5rem;
-		font-family: Georgia, serif;
-		line-height: 1.4;
-	}
-
-	.next-reveal-text {
-		font-size: 1.125rem;
-		color: #6b7280;
-		margin-top: 1rem;
 	}
 
 	.photo-credit {
 		position: absolute;
 		bottom: 1rem;
 		right: 1rem;
-		color: rgba(255, 255, 255, 0.9);
+		color: rgba(255, 255, 255, 0.95);
 		font-size: 0.875rem;
-		text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+		text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+		z-index: 20;
+	}
+
+	.photo-credit-error {
+		position: absolute;
+		bottom: 1rem;
+		right: 1rem;
+		color: rgba(255, 255, 255, 0.7);
+		font-size: 0.875rem;
+		font-style: italic;
 		z-index: 20;
 	}
 
@@ -229,20 +199,5 @@
 	.photographer-link:hover,
 	.unsplash-link:hover {
 		color: #fbbf24;
-	}
-
-	/* Responsive adjustments */
-	@media (max-width: 640px) {
-		.message-card {
-			padding: 2rem 1.5rem;
-		}
-
-		.pip-message {
-			font-size: 1.5rem;
-		}
-
-		.next-reveal-text {
-			font-size: 1rem;
-		}
 	}
 </style>
