@@ -125,5 +125,5 @@ function extractSubjectFromTitle(title: string): string {
  * Build a prompt for a childlike crayon drawing
  */
 function buildCrayonPrompt(subject: string): string {
-	return `Childlike crayon drawing of ${subject}, wobbly lines, bright vibrant colors, simple shapes, rough sketch, hand-drawn by a child, on cream paper, innocent and charming, like a Victorian street kid's drawing`;
+	return `Simple childlike crayon sketch of ${subject}, few wobbly lines, mostly uncolored, messy scribbles, stick figures, white paper showing through, imperfect circles, like a 6 year old drew it quickly, not filled in`;
 }
