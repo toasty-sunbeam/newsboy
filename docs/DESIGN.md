@@ -91,14 +91,17 @@ No pull-to-refresh needed—everything is pre-fetched and revealed on a schedule
 - **No infinite scroll**: All daily articles loaded at once, no pagination
 - **No state indicators**: No new/available/read distinctions—just content
 - **Click behavior**: Opens original article in new tab (no in-app reader for MVP)
-### "Caught Up" State
+### Visual Imagery Throughout
 
-When all available stories are read:
-- Display a beautiful, calming full-screen image
-- Pull from Unsplash API: nature scenes, cityscapes, space photography
-- Simple message from Pip: "That's the lot of it, gov'nor! Have yourself a rest."
-- Show when next stories will be revealed
-- No anxiety, no FOMO—a visual reward for finishing
+Beautiful, calming images frame the reading experience:
+- **Header image**: Full-width Unsplash photo at top of every page (200px mobile, 300px desktop)
+- **Footer image**: Full-width Unsplash photo at bottom after articles (60vh height)
+- **Always present**: Images displayed whenever articles exist, not just when caught up
+- **Image sources**: Unsplash API pulls from nature, landscapes, architecture, minimal, and space categories
+- **Pip's message**: "That's all for now, gov'nor! Have yourself a rest."
+  - Timing adapts: "I'll be back with fresh news in X hours" (tomorrow) or "I'll be back with more stories in X minutes" (later today)
+- **Photo credits**: Attribution links for Unsplash photographers
+- **No anxiety, no FOMO**: Visual richness and calming imagery create a satisfying endpoint
 
 ### Visual Design Principles
 
@@ -383,7 +386,17 @@ PUT  /api/settings          # Update settings
    - revealHour filtering in feed API (`src/routes/api/feed/+server.ts`)
    - Drip status display in frontend with next reveal time
    - 0 articles at midnight, 2 each hour until 48 total
-8. [ ] "Caught up" state with Unsplash calming imagery
+8. ✅ **Unsplash imagery throughout the reading experience**
+   - Unsplash API endpoint (`src/routes/api/unsplash/+server.ts`) fetches random calming images
+   - Header image: Full-width Unsplash photo at top of page (200px mobile, 300px desktop)
+   - Footer image: Full-width Unsplash photo at bottom, after all articles (60vh height)
+   - Images displayed ALL THE TIME when articles are present, not just when caught up
+   - CaughtUp component (`src/lib/components/CaughtUp.svelte`) displays footer image
+   - Pip's message: "That's all for now, gov'nor! Have yourself a rest."
+   - Timing adapts: "I'll be back with fresh news in X hours" (tomorrow) or "I'll be back with more stories in X minutes" (later today)
+   - Photo credits with Unsplash attribution links
+   - Edge-to-edge full-width design for maximum visual impact
+   - Test mode: Add `?test=caughtup` to URL to simulate caught-up state
 9. [ ] Crayon drawing generation for image-less articles (Replicate SD 1.5)
 10. [ ] Daily briefing generation (Claude Haiku + Pip voice)
 11. [ ] Briefing history browsing
@@ -413,7 +426,7 @@ PUT  /api/settings          # Update settings
 - [ ] Webcomic support (display comic images inline)
 - [ ] Image dimension detection + display mode classification
 - [x] **10 articles at first load, +2 revealed hourly (drip logic)**
-- [ ] "Caught up" state with Unsplash calming imagery
+- [x] **Visual imagery throughout** (Unsplash photos at header and footer, always shown)
 
 ### Phase 2: Pip's Personality Features
 - [ ] Daily briefing: Pip's top 3 picks with cockney summaries

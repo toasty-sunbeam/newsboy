@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import ArticleCard from '$lib/components/ArticleCard.svelte';
+	import CaughtUp from '$lib/components/CaughtUp.svelte';
 	import type { Article, Source } from '@prisma/client';
 
 	type ArticleWithSource = Article & { source: Source };
@@ -20,6 +21,8 @@
 	let drip: DripStatus | null = null;
 	let loading = true;
 	let error = '';
+	let isCaughtUp = false;
+	let headerImageUrl = '';
 
 	function formatNextRevealTime(hour: number): string {
 		const now = new Date();
@@ -43,16 +46,60 @@
 		return revealTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 	}
 
+	function getTimeUntilTomorrow(): string {
+		const now = new Date();
+		const tomorrow = new Date();
+		tomorrow.setDate(tomorrow.getDate() + 1);
+		tomorrow.setHours(0, 0, 0, 0);
+
+		const diffMs = tomorrow.getTime() - now.getTime();
+		const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+		const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+		if (diffHours > 0) {
+			return `${diffHours} hour${diffHours === 1 ? '' : 's'} and ${diffMins} minute${diffMins === 1 ? '' : 's'}`;
+		} else {
+			return `${diffMins} minute${diffMins === 1 ? '' : 's'}`;
+		}
+	}
+
 	onMount(async () => {
 		try {
-			const response = await fetch('/api/feed');
+			// Check if we're in test mode
+			const urlParams = new URLSearchParams(window.location.search);
+			const testMode = urlParams.get('test');
+
+			const apiUrl = testMode ? `/api/feed?test=${testMode}` : '/api/feed';
+			const response = await fetch(apiUrl);
 			const data = await response.json();
 
 			if (response.ok) {
 				articles = data.articles;
 				drip = data.drip || null;
+
+				// Check if user is caught up (has articles and no more remaining)
+				isCaughtUp =
+					articles.length > 0 && drip?.enabled && drip.remainingCount !== undefined && drip.remainingCount === 0;
+
+				// Debug logging
+				console.log('Feed loaded:', {
+					articlesCount: articles.length,
+					drip,
+					isCaughtUp
+				});
 			} else {
 				error = data.error || 'Failed to load articles';
+			}
+
+			// Fetch header image
+			try {
+				const imageResponse = await fetch('/api/unsplash');
+				if (imageResponse.ok) {
+					const imageData = await imageResponse.json();
+					headerImageUrl = imageData.imageUrl;
+				}
+			} catch (err) {
+				console.error('Failed to load header image:', err);
 			}
 		} catch (err) {
 			error = 'Failed to connect to server';
@@ -84,6 +131,16 @@
 				</nav>
 			</div>
 		</div>
+
+		<!-- Header Image -->
+		{#if headerImageUrl && !loading}
+			<div class="header-image-container">
+				<div
+					class="header-image"
+					style="background-image: url('{headerImageUrl}');"
+				></div>
+			</div>
+		{/if}
 	</header>
 
 	<!-- Main content -->
@@ -132,9 +189,32 @@
 						</ol>
 					</div>
 				</div>
+
+				<!-- Debug info -->
+				{#if drip}
+					<div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 text-left text-sm">
+						<p class="font-semibold mb-2">Debug Info:</p>
+						<pre class="text-xs overflow-auto">{JSON.stringify({ drip, isCaughtUp }, null, 2)}</pre>
+					</div>
+				{/if}
 			</div>
 		{:else}
 			<!-- Feed with articles -->
+			<!-- Debug info (top of feed) -->
+			<div class="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4 text-left text-sm">
+				<p class="font-semibold mb-2">🔍 Debug Info:</p>
+				<pre class="text-xs overflow-auto">{JSON.stringify(
+					{
+						articlesCount: articles.length,
+						drip,
+						isCaughtUp,
+						testUrl: '/?test=caughtup'
+					},
+					null,
+					2
+				)}</pre>
+			</div>
+
 			<div class="mb-6">
 				<div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-amber-500">
 					<p class="text-lg text-gray-700 italic">
@@ -173,34 +253,76 @@
 				{/each}
 			</div>
 
-			<!-- Footer message -->
-			<div class="mt-12 text-center">
+		{/if}
+	</main>
+
+	<!-- Footer message and calming image - always shown when articles exist -->
+	{#if !loading && !error && articles.length > 0}
+		<!-- Pip's message -->
+		<div class="container mx-auto px-4 pb-8">
+			<div class="text-center">
 				<div class="inline-block bg-white rounded-lg shadow-md p-6 border-2 border-amber-200">
-					{#if drip?.enabled && drip.remainingCount && drip.remainingCount > 0}
-						<p class="text-lg text-gray-700 italic">
-							"That's all I've got for now, gov'nor! Come back later for more!"
+					<p class="text-2xl text-gray-700 italic mb-3 font-serif">
+						"That's all for now, gov'nor! Have yourself a rest."
+					</p>
+					{#if isCaughtUp}
+						<!-- All done for today - next batch is tomorrow -->
+						<p class="text-sm text-gray-500">
+							I'll be back with fresh news in {getTimeUntilTomorrow()}
 						</p>
-						{#if drip.nextRevealHour !== null}
-							<p class="text-sm text-gray-500 mt-2">
-								Next batch: {formatNextRevealTime(drip.nextRevealHour)}
-							</p>
-						{/if}
+					{:else if drip?.enabled && drip.remainingCount && drip.remainingCount > 0 && drip.nextRevealHour !== null}
+						<!-- More coming later today -->
+						<p class="text-sm text-gray-500">
+							I'll be back with more stories in {formatNextRevealTime(drip.nextRevealHour)}
+						</p>
 					{:else}
-						<p class="text-lg text-gray-700 italic">
-							"That's the lot of it, gov'nor! Have yourself a rest."
+						<!-- Fallback -->
+						<p class="text-sm text-gray-500">
+							Check back soon for more!
 						</p>
 					{/if}
 				</div>
 			</div>
-		{/if}
-	</main>
+		</div>
+
+		<!-- Calming Unsplash image - full width, always shown -->
+		<div class="full-width-image-container">
+			<CaughtUp nextRevealHour={drip?.nextRevealHour || null} />
+		</div>
+	{/if}
 </div>
 
 <style>
+	/* Header image */
+	.header-image-container {
+		width: 100%;
+		height: 200px;
+		overflow: hidden;
+		position: relative;
+	}
+
+	.header-image {
+		width: 100%;
+		height: 100%;
+		background-size: cover;
+		background-position: center;
+		background-repeat: no-repeat;
+	}
+
+	/* Full width image container for caught-up state */
+	.full-width-image-container {
+		width: 100%;
+		margin-top: 2rem;
+	}
+
 	/* Ensure masonry-like behavior on larger screens */
 	@media (min-width: 768px) {
 		.grid {
 			grid-auto-flow: dense;
+		}
+
+		.header-image-container {
+			height: 300px;
 		}
 	}
 </style>
