@@ -244,13 +244,28 @@
 				</div>
 			{/if}
 
-			<!-- Two-column masonry grid -->
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-6 auto-rows-auto">
+			<!-- Two-column masonry layout -->
+			<!-- Mobile: single column -->
+			<div class="md:hidden space-y-6">
 				{#each articles as article (article.id)}
-					<div class="break-inside-avoid">
-						<ArticleCard {article} />
-					</div>
+					<ArticleCard {article} />
 				{/each}
+			</div>
+
+			<!-- Desktop: two independent columns -->
+			<div class="hidden md:flex gap-6">
+				<!-- Left column (even indices) -->
+				<div class="flex-1 space-y-6">
+					{#each articles.filter((_, i) => i % 2 === 0) as article (article.id)}
+						<ArticleCard {article} />
+					{/each}
+				</div>
+				<!-- Right column (odd indices) -->
+				<div class="flex-1 space-y-6">
+					{#each articles.filter((_, i) => i % 2 === 1) as article (article.id)}
+						<ArticleCard {article} />
+					{/each}
+				</div>
 			</div>
 
 		{/if}
@@ -315,12 +330,8 @@
 		margin-top: 2rem;
 	}
 
-	/* Ensure masonry-like behavior on larger screens */
+	/* Larger header image on desktop */
 	@media (min-width: 768px) {
-		.grid {
-			grid-auto-flow: dense;
-		}
-
 		.header-image-container {
 			height: 300px;
 		}
