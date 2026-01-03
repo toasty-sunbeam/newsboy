@@ -3,6 +3,7 @@
 
 import { prisma } from './db';
 import { fetchAndParseFeed, type FeedItem } from './rss';
+import { generateCrayonDrawing } from './replicate';
 
 // Drip configuration
 const INITIAL_ARTICLES = 0; // Articles available at midnight (hour 0)
@@ -19,6 +20,7 @@ async function main() {
 	try {
 		await fetchAllFeeds();
 		await createDailySlotsForTomorrow();
+		await generateCrayonDrawingsForTomorrow();
 		console.log('\n=== Batch Job Completed Successfully ===');
 	} catch (error) {
 		console.error('\n=== Batch Job Failed ===');
@@ -393,9 +395,143 @@ async function regenerateDailySlotsForToday() {
 	return { deleted: deleted.count, created: slots.length };
 }
 
+/**
+ * Generate crayon drawings for articles in tomorrow's slots that need them
+ */
+async function generateCrayonDrawingsForTomorrow() {
+	console.log('\n🖍️  Generating crayon drawings for image-less articles...');
+
+	// Calculate tomorrow's date (midnight)
+	const tomorrow = new Date();
+	tomorrow.setDate(tomorrow.getDate() + 1);
+	tomorrow.setHours(0, 0, 0, 0);
+
+	// Find all articles in tomorrow's slots that need crayon drawings
+	const slotsNeedingCrayons = await prisma.dailySlot.findMany({
+		where: { date: tomorrow },
+		include: {
+			article: {
+				select: {
+					id: true,
+					title: true,
+					heroImageUrl: true,
+					crayonImageUrl: true,
+					displayMode: true
+				}
+			}
+		}
+	});
+
+	// Filter to articles without images and without existing crayon drawings
+	const articlesNeedingCrayons = slotsNeedingCrayons
+		.map((slot) => slot.article)
+		.filter((article) => !article.heroImageUrl && !article.crayonImageUrl);
+
+	if (articlesNeedingCrayons.length === 0) {
+		console.log('   ℹ️  No articles need crayon drawings');
+		return;
+	}
+
+	console.log(`   Found ${articlesNeedingCrayons.length} article${articlesNeedingCrayons.length > 1 ? 's' : ''} needing crayon drawings`);
+
+	let successCount = 0;
+	let failureCount = 0;
+
+	// Generate crayon drawing for each article
+	for (const article of articlesNeedingCrayons) {
+		console.log(`\n   📰 "${article.title.substring(0, 60)}${article.title.length > 60 ? '...' : ''}"`);
+
+		const crayonUrl = await generateCrayonDrawing(article.title);
+
+		if (crayonUrl) {
+			// Update article with crayon image URL
+			await prisma.article.update({
+				where: { id: article.id },
+				data: {
+					crayonImageUrl: crayonUrl,
+					displayMode: 'crayon'
+				}
+			});
+			successCount++;
+		} else {
+			console.log('   ⚠️  Failed to generate crayon drawing, article will display without image');
+			failureCount++;
+		}
+	}
+
+	console.log(`\n   🎨 Crayon generation complete: ${successCount} succeeded, ${failureCount} failed`);
+}
+
+/**
+ * Generate crayon drawings for articles in today's slots that need them
+ * (for testing/manual use)
+ */
+async function generateCrayonDrawingsForToday() {
+	console.log('\n🖍️  Generating crayon drawings for today\'s image-less articles...');
+
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+
+	const slotsNeedingCrayons = await prisma.dailySlot.findMany({
+		where: { date: today },
+		include: {
+			article: {
+				select: {
+					id: true,
+					title: true,
+					heroImageUrl: true,
+					crayonImageUrl: true,
+					displayMode: true
+				}
+			}
+		}
+	});
+
+	const articlesNeedingCrayons = slotsNeedingCrayons
+		.map((slot) => slot.article)
+		.filter((article) => !article.heroImageUrl && !article.crayonImageUrl);
+
+	if (articlesNeedingCrayons.length === 0) {
+		console.log('   ℹ️  No articles need crayon drawings');
+		return 0;
+	}
+
+	console.log(`   Found ${articlesNeedingCrayons.length} article${articlesNeedingCrayons.length > 1 ? 's' : ''} needing crayon drawings`);
+
+	let successCount = 0;
+
+	for (const article of articlesNeedingCrayons) {
+		console.log(`\n   📰 "${article.title.substring(0, 60)}${article.title.length > 60 ? '...' : ''}"`);
+
+		const crayonUrl = await generateCrayonDrawing(article.title);
+
+		if (crayonUrl) {
+			await prisma.article.update({
+				where: { id: article.id },
+				data: {
+					crayonImageUrl: crayonUrl,
+					displayMode: 'crayon'
+				}
+			});
+			successCount++;
+		}
+	}
+
+	console.log(`\n   🎨 Crayon generation complete: ${successCount} succeeded`);
+	return successCount;
+}
+
 // Run if this file is executed directly
 if (import.meta.main) {
 	main();
 }
 
-export { fetchAllFeeds, storeArticle, createDailySlotsForTomorrow, createDailySlotsForToday, regenerateDailySlotsForToday };
+export {
+	fetchAllFeeds,
+	storeArticle,
+	createDailySlotsForTomorrow,
+	createDailySlotsForToday,
+	regenerateDailySlotsForToday,
+	generateCrayonDrawingsForTomorrow,
+	generateCrayonDrawingsForToday
+};

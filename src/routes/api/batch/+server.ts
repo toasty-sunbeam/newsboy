@@ -2,7 +2,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getCronStatus, triggerBatchNow } from '$lib/server/cron';
-import { regenerateDailySlotsForToday } from '$lib/server/batch';
+import { regenerateDailySlotsForToday, generateCrayonDrawingsForToday } from '$lib/server/batch';
 
 /**
  * GET /api/batch - Get cron status
@@ -16,11 +16,23 @@ export const GET: RequestHandler = async () => {
  * POST /api/batch - Manually trigger batch job or regenerate slots
  * Query params:
  *   - regenerate=true: Only regenerate today's slots (faster, no RSS fetch)
+ *   - crayons=true: Only generate crayon drawings for today's image-less articles
  */
 export const POST: RequestHandler = async ({ url }) => {
 	const regenerate = url.searchParams.get('regenerate') === 'true';
+	const crayons = url.searchParams.get('crayons') === 'true';
 
 	try {
+		if (crayons) {
+			// Generate crayon drawings for today's articles that need them
+			const count = await generateCrayonDrawingsForToday();
+			return json({
+				success: true,
+				message: `Generated ${count} crayon drawing${count !== 1 ? 's' : ''} for today's articles`,
+				count
+			});
+		}
+
 		if (regenerate) {
 			// Just regenerate slots for today (no RSS fetch)
 			const result = await regenerateDailySlotsForToday();
