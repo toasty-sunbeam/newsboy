@@ -3,13 +3,17 @@
 
 import Replicate from 'replicate';
 
-// Check for API token
-if (!process.env.REPLICATE_API_TOKEN) {
+// Debug: Check environment variable
+const token = process.env.REPLICATE_API_TOKEN;
+if (token) {
+	console.log(`✅ REPLICATE_API_TOKEN loaded (length: ${token.length} chars, starts with: ${token.substring(0, 5)}...)`);
+} else {
 	console.warn('⚠️  REPLICATE_API_TOKEN not set. Crayon drawing generation will be skipped.');
+	console.warn('   Make sure your .env file exists and the dev server was restarted after adding the token.');
 }
 
 const replicate = new Replicate({
-	auth: process.env.REPLICATE_API_TOKEN || ''
+	auth: token || ''
 });
 
 /**
@@ -19,7 +23,7 @@ const replicate = new Replicate({
  */
 export async function generateCrayonDrawing(title: string): Promise<string | null> {
 	// Skip if no API token
-	if (!process.env.REPLICATE_API_TOKEN) {
+	if (!token) {
 		console.log('   ⚠️  Skipping crayon drawing (no REPLICATE_API_TOKEN)');
 		return null;
 	}
