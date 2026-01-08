@@ -2,7 +2,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getCronStatus, triggerBatchNow } from '$lib/server/cron';
-import { regenerateDailySlotsForToday, generateCrayonDrawingsForToday } from '$lib/server/batch';
+import { regenerateDailySlotsForToday, generateCrayonDrawingsForToday, generateBriefingForToday } from '$lib/server/batch';
 
 /**
  * GET /api/batch - Get cron status
@@ -17,12 +17,23 @@ export const GET: RequestHandler = async () => {
  * Query params:
  *   - regenerate=true: Only regenerate today's slots (faster, no RSS fetch)
  *   - crayons=true: Only generate crayon drawings for today's image-less articles
+ *   - briefing=true: Only generate today's briefing
  */
 export const POST: RequestHandler = async ({ url }) => {
 	const regenerate = url.searchParams.get('regenerate') === 'true';
 	const crayons = url.searchParams.get('crayons') === 'true';
+	const briefing = url.searchParams.get('briefing') === 'true';
 
 	try {
+		if (briefing) {
+			// Generate briefing for today
+			await generateBriefingForToday();
+			return json({
+				success: true,
+				message: 'Generated today\'s briefing successfully'
+			});
+		}
+
 		if (crayons) {
 			// Generate crayon drawings for today's articles that need them
 			const count = await generateCrayonDrawingsForToday();
@@ -34,11 +45,15 @@ export const POST: RequestHandler = async ({ url }) => {
 		}
 
 		if (regenerate) {
-			// Just regenerate slots for today (no RSS fetch)
+			// Regenerate slots for today and briefing (no RSS fetch)
 			const result = await regenerateDailySlotsForToday();
+
+			// Also generate today's briefing
+			await generateBriefingForToday();
+
 			return json({
 				success: true,
-				message: `Regenerated feed: ${result.created} articles slotted for today`,
+				message: `Regenerated feed: ${result.created} articles slotted for today, briefing generated`,
 				...result
 			});
 		}

@@ -4,6 +4,8 @@
 import { prisma } from './db';
 import { fetchAndParseFeed, type FeedItem } from './rss';
 import { generateCrayonDrawing } from './replicate';
+import { generateDailyBriefing } from './claude';
+import { env } from '$env/dynamic/private';
 
 // Drip configuration
 const INITIAL_ARTICLES = 0; // Articles available at midnight (hour 0)
@@ -31,6 +33,7 @@ async function main() {
 		await fetchAllFeeds();
 		await createDailySlotsForTomorrow();
 		await generateCrayonDrawingsForTomorrow();
+		await generateBriefingForTomorrow();
 		console.log('\n=== Batch Job Completed Successfully ===');
 	} catch (error) {
 		console.error('\n=== Batch Job Failed ===');
@@ -409,6 +412,8 @@ async function regenerateDailySlotsForToday() {
  * Generate crayon drawings for articles in tomorrow's slots that need them
  */
 async function generateCrayonDrawingsForTomorrow() {
+	if (process.env.CRAYON_GENERATION_ENABLED !== 'true') return false;
+
 	console.log('\n🖍️  Generating crayon drawings for image-less articles...');
 
 	// Calculate tomorrow's date (midnight)
@@ -485,6 +490,8 @@ async function generateCrayonDrawingsForTomorrow() {
  * (for testing/manual use)
  */
 async function generateCrayonDrawingsForToday() {
+	if (process.env.CRAYON_GENERATION_ENABLED !== 'true') return false;
+
 	console.log('\n🖍️  Generating crayon drawings for today\'s image-less articles...');
 
 	const today = new Date();
@@ -547,6 +554,136 @@ async function generateCrayonDrawingsForToday() {
 	return successCount;
 }
 
+/**
+ * Generate Pip's daily briefing for tomorrow's top articles
+ */
+async function generateBriefingForTomorrow() {
+	console.log('\n📰 Generating Pip\'s daily briefing...');
+
+	// Calculate tomorrow's date (midnight)
+	const tomorrow = new Date();
+	tomorrow.setDate(tomorrow.getDate() + 1);
+	tomorrow.setHours(0, 0, 0, 0);
+
+	// Check if briefing already exists for tomorrow
+	const existingBriefing = await prisma.dailyBriefing.findUnique({
+		where: { date: tomorrow }
+	});
+
+	if (existingBriefing) {
+		console.log(`   ℹ️  Briefing already exists for ${tomorrow.toDateString()}`);
+		console.log('   Skipping briefing generation...');
+		return;
+	}
+
+	// Get tomorrow's slots ordered by position to find the top 3 articles
+	const tomorrowSlots = await prisma.dailySlot.findMany({
+		where: { date: tomorrow },
+		include: {
+			article: {
+				select: {
+					id: true,
+					title: true,
+					excerpt: true,
+					url: true
+				}
+			}
+		},
+		orderBy: { position: 'asc' },
+		take: 3
+	});
+
+	if (tomorrowSlots.length === 0) {
+		console.log('   ⚠️  No articles found for tomorrow, skipping briefing');
+		return;
+	}
+
+	console.log(`   Found ${tomorrowSlots.length} article(s) for briefing`);
+
+	// Extract article data for briefing generation
+	const articles = tomorrowSlots.map((slot) => ({
+		title: slot.article.title,
+		excerpt: slot.article.excerpt,
+		url: slot.article.url
+	}));
+
+	// Generate briefing using Claude
+	console.log('   🤖 Calling Claude API to generate Pip\'s briefing...');
+	const pipSummary = await generateDailyBriefing(articles);
+
+	// Store the briefing
+	await prisma.dailyBriefing.create({
+		data: {
+			date: tomorrow,
+			pipSummary,
+			featuredArticleIds: JSON.stringify(tomorrowSlots.map((slot) => slot.article.id))
+		}
+	});
+
+	console.log('   ✅ Daily briefing generated and saved');
+	console.log(`   Preview: "${pipSummary.substring(0, 100)}..."`);
+}
+
+/**
+ * Generate Pip's daily briefing for today's top articles
+ * (for testing/manual use)
+ */
+async function generateBriefingForToday() {
+	console.log('\n📰 Generating Pip\'s briefing for today...');
+
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+
+	// Delete existing briefing for today if it exists
+	await prisma.dailyBriefing.deleteMany({
+		where: { date: today }
+	});
+
+	// Get today's slots ordered by position to find the top 3 articles
+	const todaySlots = await prisma.dailySlot.findMany({
+		where: { date: today },
+		include: {
+			article: {
+				select: {
+					id: true,
+					title: true,
+					excerpt: true,
+					url: true
+				}
+			}
+		},
+		orderBy: { position: 'asc' },
+		take: 3
+	});
+
+	if (todaySlots.length === 0) {
+		console.log('   ⚠️  No articles found for today');
+		return;
+	}
+
+	console.log(`   Found ${todaySlots.length} article(s) for briefing`);
+
+	const articles = todaySlots.map((slot) => ({
+		title: slot.article.title,
+		excerpt: slot.article.excerpt,
+		url: slot.article.url
+	}));
+
+	console.log('   🤖 Calling Claude API to generate Pip\'s briefing...');
+	const pipSummary = await generateDailyBriefing(articles);
+
+	await prisma.dailyBriefing.create({
+		data: {
+			date: today,
+			pipSummary,
+			featuredArticleIds: JSON.stringify(todaySlots.map((slot) => slot.article.id))
+		}
+	});
+
+	console.log('   ✅ Daily briefing generated and saved for today');
+	console.log(`   Preview: "${pipSummary.substring(0, 100)}..."`);
+}
+
 // Run if this file is executed directly
 if (import.meta.main) {
 	main();
@@ -559,5 +696,7 @@ export {
 	createDailySlotsForToday,
 	regenerateDailySlotsForToday,
 	generateCrayonDrawingsForTomorrow,
-	generateCrayonDrawingsForToday
+	generateCrayonDrawingsForToday,
+	generateBriefingForTomorrow,
+	generateBriefingForToday
 };
