@@ -18,6 +18,16 @@
 		isAdding: boolean;
 	}
 
+	interface UserPreferences {
+		id: string;
+		interests: Record<string, number>;
+		sourceWeights: Record<string, number>;
+		moodBalance: number;
+		preferLongForm: boolean;
+		preferVisual: boolean;
+		updatedAt: string;
+	}
+
 	let categories: CategoryGroup[] = $state([]);
 	let newCategoryName = $state('');
 	let isCreatingCategory = $state(false);
@@ -27,11 +37,13 @@
 	let isRegenerating = $state(false);
 	let isFetchingFeeds = $state(false);
 	let isGeneratingCrayons = $state(false);
+	let preferences: UserPreferences | null = $state(null);
+	let loadingPreferences = $state(true);
 
 	const DEFAULT_CATEGORIES = ['News', 'Webcomics', 'Science', 'Tech', 'Other'];
 
 	onMount(async () => {
-		await loadSources();
+		await Promise.all([loadSources(), loadPreferences()]);
 	});
 
 	async function loadSources() {
@@ -67,6 +79,24 @@
 			showMessage('Failed to load feeds', 'error');
 		} finally {
 			loading = false;
+		}
+	}
+
+	async function loadPreferences() {
+		try {
+			loadingPreferences = true;
+			const response = await fetch('/api/preferences');
+			const data = await response.json();
+
+			if (response.ok) {
+				preferences = data;
+			} else {
+				console.error('Failed to load preferences:', data.error);
+			}
+		} catch (error) {
+			console.error('Failed to load preferences:', error);
+		} finally {
+			loadingPreferences = false;
 		}
 	}
 
@@ -295,6 +325,107 @@
 				<strong>Fetch:</strong> Downloads new articles from all your RSS feeds, creates today's feed, then generates crayon drawings.<br />
 				<strong>Generate Crayons:</strong> Creates Pip's hand-drawn illustrations for articles without images (uses Replicate API).
 			</p>
+		</div>
+
+		<!-- User Preferences -->
+		<div class="mb-8 bg-white rounded-lg shadow-lg p-6 border-4 border-purple-200">
+			<h2 class="text-xl font-bold text-gray-800 mb-4">Your Preferences</h2>
+
+			{#if loadingPreferences}
+				<div class="text-gray-600">Loading preferences...</div>
+			{:else if preferences}
+				<div class="space-y-4">
+					<!-- Mood Balance -->
+					<div class="p-4 bg-purple-50 rounded-lg border-2 border-purple-100">
+						<h3 class="font-semibold text-gray-700 mb-2">Mood Balance</h3>
+						<div class="flex items-center gap-4">
+							<span class="text-sm text-gray-600">Serious</span>
+							<div class="flex-1 bg-gray-200 rounded-full h-2 relative">
+								<div
+									class="absolute h-2 rounded-full bg-purple-500"
+									style="width: {((preferences.moodBalance + 1) / 2) * 100}%; transition: width 0.3s;"
+								></div>
+							</div>
+							<span class="text-sm text-gray-600">Uplifting</span>
+							<span class="text-lg font-bold text-purple-700 min-w-[3rem] text-right">
+								{preferences.moodBalance.toFixed(1)}
+							</span>
+						</div>
+					</div>
+
+					<!-- Format Preferences -->
+					<div class="p-4 bg-blue-50 rounded-lg border-2 border-blue-100">
+						<h3 class="font-semibold text-gray-700 mb-2">Format Preferences</h3>
+						<div class="space-y-2">
+							<div class="flex items-center gap-2">
+								<span class="text-2xl">{preferences.preferLongForm ? '✅' : '❌'}</span>
+								<span class="text-gray-700">Prefer long-form content</span>
+							</div>
+							<div class="flex items-center gap-2">
+								<span class="text-2xl">{preferences.preferVisual ? '✅' : '❌'}</span>
+								<span class="text-gray-700">Prefer visual content</span>
+							</div>
+						</div>
+					</div>
+
+					<!-- Interests -->
+					<div class="p-4 bg-amber-50 rounded-lg border-2 border-amber-100">
+						<h3 class="font-semibold text-gray-700 mb-3">Topic Interests</h3>
+						{#if Object.keys(preferences.interests).length > 0}
+							<div class="space-y-2">
+								{#each Object.entries(preferences.interests) as [topic, weight]}
+									<div class="flex items-center gap-3">
+										<span class="flex-1 text-gray-800">{topic}</span>
+										<div class="flex-1 bg-gray-200 rounded-full h-2 relative max-w-xs">
+											<div
+												class="absolute h-2 rounded-full bg-amber-500"
+												style="width: {weight * 100}%; transition: width 0.3s;"
+											></div>
+										</div>
+										<span class="text-sm font-semibold text-amber-700 min-w-[3rem] text-right">
+											{weight.toFixed(1)}
+										</span>
+									</div>
+								{/each}
+							</div>
+						{:else}
+							<p class="text-gray-500 italic">No specific interests set yet</p>
+						{/if}
+					</div>
+
+					<!-- Source Weights -->
+					<div class="p-4 bg-green-50 rounded-lg border-2 border-green-100">
+						<h3 class="font-semibold text-gray-700 mb-3">Source Weights</h3>
+						{#if Object.keys(preferences.sourceWeights).length > 0}
+							<div class="space-y-2">
+								{#each Object.entries(preferences.sourceWeights) as [sourceId, weight]}
+									<div class="flex items-center gap-3">
+										<span class="flex-1 text-gray-800 font-mono text-sm truncate">{sourceId}</span>
+										<div class="flex-1 bg-gray-200 rounded-full h-2 relative max-w-xs">
+											<div
+												class="absolute h-2 rounded-full {weight > 0 ? 'bg-green-500' : 'bg-red-500'}"
+												style="width: {Math.abs(weight) * 100}%; transition: width 0.3s;"
+											></div>
+										</div>
+										<span class="text-sm font-semibold {weight > 0 ? 'text-green-700' : 'text-red-700'} min-w-[3rem] text-right">
+											{weight > 0 ? '+' : ''}{weight.toFixed(1)}
+										</span>
+									</div>
+								{/each}
+							</div>
+						{:else}
+							<p class="text-gray-500 italic">No source weights configured</p>
+						{/if}
+					</div>
+
+					<!-- Last Updated -->
+					<div class="text-sm text-gray-500 text-right">
+						Last updated: {new Date(preferences.updatedAt).toLocaleString()}
+					</div>
+				</div>
+			{:else}
+				<div class="text-gray-600">No preferences found</div>
+			{/if}
 		</div>
 
 		<!-- Loading State -->
