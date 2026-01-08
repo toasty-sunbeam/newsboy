@@ -68,7 +68,7 @@ Now write your briefing:`;
 
 	try {
 		const response = await anthropic.messages.create({
-			model: 'claude-haiku-4-20250131',
+			model: 'claude-3-5-haiku-20241022',
 			max_tokens: 300,
 			temperature: 0.7,
 			messages: [
