@@ -56,10 +56,47 @@ This approach is simpler and more flexible than OPML import, allowing you to org
 ```bash
 bun install              # Install dependencies
 bun dev                  # Run dev server
-bun prisma studio        # View/edit database
-bun prisma db push       # Apply schema changes
+bunx prisma studio       # View/edit database
+bunx prisma db push      # Apply schema changes
+bunx prisma generate     # Generate Prisma client from schema
 bun run batch            # Manually trigger nightly job (for testing)
 ```
+
+## Prisma Setup (IMPORTANT!)
+
+**Critical steps when working with Prisma in this project:**
+
+1. **After changing `prisma/schema.prisma`**, you MUST run both:
+   ```bash
+   bunx prisma generate     # Generates TypeScript client code
+   bunx prisma db push      # Syncs database schema
+   ```
+
+2. **After fresh clone or `bun install`**, run:
+   ```bash
+   bunx prisma generate     # Creates @prisma/client with typed models
+   bunx prisma db push      # Creates/updates newsboy.db file
+   ```
+
+3. **Import naming convention**: Always use `import { prisma } from '$lib/server/db'`
+   - The export in `db.ts` is named `prisma`, NOT `db`
+   - Most of the codebase uses `prisma` as the import name
+   - DO NOT import as `db` - it causes undefined errors at runtime
+
+4. **Auto-initialization**: The server automatically creates default preferences on startup
+   - See `src/hooks.server.ts` for database initialization
+   - No manual scripts needed for preferences
+
+**Common errors:**
+
+- `Cannot read properties of undefined (reading 'userPreferences')`
+  → Run `bunx prisma generate` to create the Prisma client
+
+- `The database is already in sync` but app fails
+  → You ran `db push` but forgot `prisma generate`
+
+- Import errors in new files
+  → Check you're using `import { prisma }` not `import { db }`
 
 ## Environment Variables
 
