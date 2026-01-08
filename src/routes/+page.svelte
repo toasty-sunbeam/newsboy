@@ -201,19 +201,16 @@
 			<div class="mb-6">
 				<div class="bg-white rounded-lg shadow-md border-2 border-amber-300 px-6 py-4">
 					<div class="flex items-center justify-between gap-4">
-						{#if briefingNavigation.previousDate}
-							<button
-								on:click={() => window.location.href = `/?briefingDate=${briefingNavigation.previousDate}`}
-								class="flex items-center gap-2 px-4 py-2 bg-amber-100 text-gray-700 rounded-lg hover:bg-amber-200 hover:text-amber-800 font-medium transition-all border border-amber-300"
-							>
-								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-								</svg>
-								<span>Previous Day</span>
-							</button>
-						{:else}
-							<div></div>
-						{/if}
+						<button
+							on:click={() => briefingNavigation.previousDate && (window.location.href = `/?briefingDate=${briefingNavigation.previousDate}`)}
+							disabled={!briefingNavigation.previousDate}
+							class="flex items-center gap-2 px-4 py-2 bg-amber-100 text-gray-700 rounded-lg font-medium transition-all border border-amber-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-amber-200 hover:text-amber-800 disabled:hover:bg-amber-100 disabled:hover:text-gray-700"
+						>
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+							</svg>
+							<span>Previous Day</span>
+						</button>
 
 						<button
 							on:click={() => window.location.href = '/'}
@@ -222,19 +219,16 @@
 							📰 Today's Briefing
 						</button>
 
-						{#if briefingNavigation.nextDate}
-							<button
-								on:click={() => window.location.href = `/?briefingDate=${briefingNavigation.nextDate}`}
-								class="flex items-center gap-2 px-4 py-2 bg-amber-100 text-gray-700 rounded-lg hover:bg-amber-200 hover:text-amber-800 font-medium transition-all border border-amber-300"
-							>
-								<span>Next Day</span>
-								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-								</svg>
-							</button>
-						{:else}
-							<div></div>
-						{/if}
+						<button
+							on:click={() => briefingNavigation.nextDate && (window.location.href = `/?briefingDate=${briefingNavigation.nextDate}`)}
+							disabled={!briefingNavigation.nextDate}
+							class="flex items-center gap-2 px-4 py-2 bg-amber-100 text-gray-700 rounded-lg font-medium transition-all border border-amber-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-amber-200 hover:text-amber-800 disabled:hover:bg-amber-100 disabled:hover:text-gray-700"
+						>
+							<span>Next Day</span>
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+							</svg>
+						</button>
 					</div>
 				</div>
 			</div>
@@ -403,13 +397,14 @@
 		</div>
 
 		<!-- Bottom navigation for briefing history -->
-		{#if briefingNavigation && briefingNavigation.previousDate}
+		{#if briefingNavigation}
 			<div class="container mx-auto px-4 pb-8">
 				<div class="bg-white rounded-lg shadow-md border-2 border-amber-300 px-6 py-4">
 					<div class="flex items-center justify-between gap-4">
 						<button
-							on:click={() => window.location.href = `/?briefingDate=${briefingNavigation.previousDate}`}
-							class="flex items-center gap-2 px-4 py-2 bg-amber-100 text-gray-700 rounded-lg hover:bg-amber-200 hover:text-amber-800 font-medium transition-all border border-amber-300"
+							on:click={() => briefingNavigation.previousDate && (window.location.href = `/?briefingDate=${briefingNavigation.previousDate}`)}
+							disabled={!briefingNavigation.previousDate}
+							class="flex items-center gap-2 px-4 py-2 bg-amber-100 text-gray-700 rounded-lg font-medium transition-all border border-amber-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-amber-200 hover:text-amber-800 disabled:hover:bg-amber-100 disabled:hover:text-gray-700"
 						>
 							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -417,30 +412,24 @@
 							<span>Previous Day</span>
 						</button>
 
-						{#if !briefingNavigation.isToday}
-							<button
-								on:click={() => window.location.href = '/'}
-								class="px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-semibold transition-all shadow-md"
-							>
-								📰 Today's Briefing
-							</button>
-						{:else}
-							<div></div>
-						{/if}
+						<button
+							on:click={() => window.location.href = '/'}
+							disabled={briefingNavigation.isToday}
+							class="px-6 py-2 bg-amber-500 text-white rounded-lg font-semibold transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed hover:bg-amber-600 disabled:hover:bg-amber-500"
+						>
+							📰 Today's Briefing
+						</button>
 
-						{#if briefingNavigation.nextDate}
-							<button
-								on:click={() => window.location.href = `/?briefingDate=${briefingNavigation.nextDate}`}
-								class="flex items-center gap-2 px-4 py-2 bg-amber-100 text-gray-700 rounded-lg hover:bg-amber-200 hover:text-amber-800 font-medium transition-all border border-amber-300"
-							>
-								<span>Next Day</span>
-								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-								</svg>
-							</button>
-						{:else}
-							<div></div>
-						{/if}
+						<button
+							on:click={() => briefingNavigation.nextDate && (window.location.href = `/?briefingDate=${briefingNavigation.nextDate}`)}
+							disabled={!briefingNavigation.nextDate}
+							class="flex items-center gap-2 px-4 py-2 bg-amber-100 text-gray-700 rounded-lg font-medium transition-all border border-amber-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-amber-200 hover:text-amber-800 disabled:hover:bg-amber-100 disabled:hover:text-gray-700"
+						>
+							<span>Next Day</span>
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+							</svg>
+						</button>
 					</div>
 				</div>
 			</div>
