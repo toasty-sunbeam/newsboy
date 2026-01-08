@@ -417,7 +417,12 @@ PUT  /api/settings          # Update settings
    - Displayed at top of feed with featured articles links
    - Fallback briefing if API fails
    - Briefings stored in database for history browsing
-11. [ ] Briefing history browsing
+11. ✅ **Briefing history browsing**
+   - API supports ?date=YYYY-MM-DD parameter to fetch specific briefing
+   - Navigation data includes previousDate, nextDate, and isToday flags
+   - Page-level navigation at top (historical only) and bottom (always)
+   - Disabled state for unavailable navigation buttons
+   - Clean URLs via ?briefingDate=YYYY-MM-DD parameter
 
 ### Phase 3: Conversational Tuning
 12. [ ] Preference profile storage
@@ -448,7 +453,7 @@ PUT  /api/settings          # Update settings
 
 ### Phase 2: Pip's Personality Features
 - [x] **Daily briefing: Pip's top 3 picks with cockney summaries** — integrated with Claude Haiku
-- [ ] Briefing history: browse past days
+- [x] **Briefing history: browse past days** — with navigation buttons and date-based URLs
 - [x] **Crayon drawings for image-less articles (Replicate SD 1.5)** — with feature flag and playground
 - [ ] Text input for natural language preference adjustment
 - [ ] Claude API (Haiku) for intent parsing
