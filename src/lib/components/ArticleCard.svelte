@@ -60,6 +60,24 @@
 				</div>
 			{/if}
 		</div>
+	{:else}
+		<!-- Placeholder for articles without images -->
+		<div class="relative h-48 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex items-center justify-center overflow-hidden">
+			<!-- Decorative crayon strokes background -->
+			<div class="absolute inset-0 opacity-10">
+				<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+					<path d="M10,30 Q50,10 90,30 T170,30" stroke="#f59e0b" stroke-width="3" fill="none" opacity="0.3"/>
+					<path d="M20,80 Q60,60 100,80 T180,80" stroke="#ef4444" stroke-width="3" fill="none" opacity="0.3"/>
+					<path d="M30,130 Q70,110 110,130 T190,130" stroke="#3b82f6" stroke-width="3" fill="none" opacity="0.3"/>
+				</svg>
+			</div>
+
+			<!-- Pip's message -->
+			<div class="relative text-center px-6">
+				<div class="text-4xl mb-2">🖍️</div>
+				<p class="text-amber-700 font-medium text-sm">Pip's workin' on a drawin' for this one!</p>
+			</div>
+		</div>
 	{/if}
 
 	<!-- Content section -->

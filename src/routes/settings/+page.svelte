@@ -26,6 +26,7 @@
 	let messageType: 'success' | 'error' = $state('success');
 	let isRegenerating = $state(false);
 	let isFetchingFeeds = $state(false);
+	let isGeneratingCrayons = $state(false);
 
 	const DEFAULT_CATEGORIES = ['News', 'Webcomics', 'Science', 'Tech', 'Other'];
 
@@ -181,6 +182,8 @@
 
 			if (response.ok) {
 				showMessage(data.message, 'success');
+				// Also generate crayons for the regenerated feed
+				await generateCrayons();
 			} else {
 				showMessage(data.message || 'Failed to regenerate feed', 'error');
 			}
@@ -200,6 +203,8 @@
 
 			if (response.ok) {
 				showMessage(data.message, 'success');
+				// Also generate crayons for any new articles
+				await generateCrayons();
 			} else {
 				showMessage(data.message || 'Failed to fetch feeds', 'error');
 			}
@@ -210,13 +215,37 @@
 			isFetchingFeeds = false;
 		}
 	}
+
+	async function generateCrayons() {
+		isGeneratingCrayons = true;
+		try {
+			const response = await fetch('/api/batch?crayons=true', { method: 'POST' });
+			const data = await response.json();
+
+			if (response.ok) {
+				showMessage(data.message, 'success');
+			} else {
+				showMessage(data.message || 'Failed to generate crayon drawings', 'error');
+			}
+		} catch (error) {
+			console.error('Failed to generate crayons:', error);
+			showMessage('Failed to generate crayon drawings', 'error');
+		} finally {
+			isGeneratingCrayons = false;
+		}
+	}
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
 	<div class="container mx-auto px-4 py-8">
 		<!-- Header -->
 		<div class="mb-8">
-			<a href="/" class="text-amber-700 hover:text-amber-900 mb-4 inline-block">← Back to Feed</a>
+			<div class="flex items-center justify-between mb-4">
+				<a href="/" class="text-amber-700 hover:text-amber-900 inline-block">← Back to Feed</a>
+				<a href="/crayon-playground" class="text-purple-700 hover:text-purple-900 inline-block">
+					🖍️ Crayon Playground →
+				</a>
+			</div>
 			<h1 class="text-4xl font-bold text-gray-800">Feed Settings</h1>
 			<p class="text-gray-600 mt-2 font-serif italic">
 				"Right then, let's get yer feeds sorted by category, gov'nor!"
@@ -253,10 +282,18 @@
 				>
 					{isFetchingFeeds ? '📰 Fetching...' : '📰 Fetch New Articles'}
 				</button>
+				<button
+					onclick={generateCrayons}
+					disabled={isGeneratingCrayons}
+					class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+				>
+					{isGeneratingCrayons ? '🖍️ Drawing...' : '🖍️ Generate Crayon Drawings'}
+				</button>
 			</div>
 			<p class="text-sm text-gray-500 mt-3">
-				<strong>Regenerate:</strong> Clears today's feed and picks new articles from what's already fetched.<br />
-				<strong>Fetch:</strong> Downloads new articles from all your RSS feeds, then creates today's feed.
+				<strong>Regenerate:</strong> Clears today's feed and picks new articles from what's already fetched, then generates crayon drawings.<br />
+				<strong>Fetch:</strong> Downloads new articles from all your RSS feeds, creates today's feed, then generates crayon drawings.<br />
+				<strong>Generate Crayons:</strong> Creates Pip's hand-drawn illustrations for articles without images (uses Replicate API).
 			</p>
 		</div>
 
