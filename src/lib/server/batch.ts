@@ -5,6 +5,7 @@ import { prisma } from './db';
 import { fetchAndParseFeed, type FeedItem } from './rss';
 import { generateCrayonDrawing } from './replicate';
 import { generateDailyBriefing } from './claude';
+import { env } from '$env/dynamic/private';
 
 // Drip configuration
 const INITIAL_ARTICLES = 0; // Articles available at midnight (hour 0)
@@ -411,6 +412,8 @@ async function regenerateDailySlotsForToday() {
  * Generate crayon drawings for articles in tomorrow's slots that need them
  */
 async function generateCrayonDrawingsForTomorrow() {
+	if (process.env.CRAYON_GENERATION_ENABLED !== 'true') return false;
+
 	console.log('\n🖍️  Generating crayon drawings for image-less articles...');
 
 	// Calculate tomorrow's date (midnight)
