@@ -1,4 +1,6 @@
 // API endpoint for custom crayon drawing generation (playground)
+// Note: This endpoint works regardless of CRAYON_GENERATION_ENABLED flag
+// so you can experiment even when automatic generation is disabled
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import Replicate from 'replicate';
@@ -9,12 +11,18 @@ const replicate = new Replicate({
 
 export const POST: RequestHandler = async ({ request }) => {
 	const token = process.env.REPLICATE_API_TOKEN;
+	const enabled = process.env.CRAYON_GENERATION_ENABLED === 'true';
 
 	if (!token) {
 		return json(
 			{ error: 'REPLICATE_API_TOKEN not configured' },
 			{ status: 500 }
 		);
+	}
+
+	// Log if main feature is disabled but playground is being used
+	if (!enabled) {
+		console.log('ℹ️  Playground generation active (main feature disabled, but playground still works)');
 	}
 
 	try {

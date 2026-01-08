@@ -3,13 +3,20 @@
 
 import Replicate from 'replicate';
 
-// Debug: Check environment variable
+// Feature flag and environment variables
+const CRAYON_GENERATION_ENABLED = process.env.CRAYON_GENERATION_ENABLED === 'true';
 const token = process.env.REPLICATE_API_TOKEN;
-if (token) {
-	console.log(`✅ REPLICATE_API_TOKEN loaded (length: ${token.length} chars, starts with: ${token.substring(0, 5)}...)`);
+
+if (CRAYON_GENERATION_ENABLED) {
+	console.log('🖍️  Crayon generation is ENABLED');
+	if (token) {
+		console.log(`✅ REPLICATE_API_TOKEN loaded (length: ${token.length} chars, starts with: ${token.substring(0, 5)}...)`);
+	} else {
+		console.warn('⚠️  REPLICATE_API_TOKEN not set. Crayon drawing generation will be skipped.');
+		console.warn('   Make sure your .env file exists and the dev server was restarted after adding the token.');
+	}
 } else {
-	console.warn('⚠️  REPLICATE_API_TOKEN not set. Crayon drawing generation will be skipped.');
-	console.warn('   Make sure your .env file exists and the dev server was restarted after adding the token.');
+	console.log('🔒 Crayon generation is DISABLED (set CRAYON_GENERATION_ENABLED=true to enable)');
 }
 
 const replicate = new Replicate({
@@ -22,6 +29,12 @@ const replicate = new Replicate({
  * @returns URL of the generated image, or null if generation failed
  */
 export async function generateCrayonDrawing(title: string, retries = 3): Promise<string | null> {
+	// Skip if feature is disabled
+	if (!CRAYON_GENERATION_ENABLED) {
+		console.log('   🔒 Skipping crayon drawing (feature disabled)');
+		return null;
+	}
+
 	// Skip if no API token
 	if (!token) {
 		console.log('   ⚠️  Skipping crayon drawing (no REPLICATE_API_TOKEN)');
