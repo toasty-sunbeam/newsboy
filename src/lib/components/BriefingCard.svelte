@@ -9,12 +9,6 @@
 		featuredArticles: (Article & { source: Source })[];
 	};
 
-	export let navigation: {
-		isToday: boolean;
-		previousDate: string | null;
-		nextDate: string | null;
-	} | null = null;
-
 	// Format the date nicely
 	const briefingDate = new Date(briefing.date).toLocaleDateString('en-US', {
 		weekday: 'long',
@@ -22,19 +16,6 @@
 		day: 'numeric',
 		year: 'numeric'
 	});
-
-	// Show navigation at top if this is not today's briefing (historical)
-	$: showTopNav = navigation && !navigation.isToday;
-	// Always show bottom nav if there's a previous date
-	$: showBottomNav = navigation && navigation.previousDate;
-
-	function navigateToDate(date: string) {
-		window.location.href = `/?briefingDate=${date}`;
-	}
-
-	function navigateToToday() {
-		window.location.href = '/';
-	}
 </script>
 
 <div class="bg-white rounded-lg shadow-xl overflow-hidden border-4 border-amber-400">
@@ -48,48 +29,6 @@
 			</div>
 		</div>
 	</div>
-
-	<!-- Top navigation (for historical briefings) -->
-	{#if showTopNav}
-		<div class="bg-amber-100 border-b-2 border-amber-200 px-6 py-3">
-			<div class="flex items-center justify-between gap-4">
-				{#if navigation?.previousDate}
-					<button
-						on:click={() => navigateToDate(navigation.previousDate)}
-						class="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-amber-50 hover:text-amber-700 font-medium transition-all border border-amber-300 shadow-sm"
-					>
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-						</svg>
-						<span>Previous Day</span>
-					</button>
-				{:else}
-					<div></div>
-				{/if}
-
-				<button
-					on:click={navigateToToday}
-					class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-medium transition-all shadow-sm"
-				>
-					Today's Briefing
-				</button>
-
-				{#if navigation?.nextDate}
-					<button
-						on:click={() => navigateToDate(navigation.nextDate)}
-						class="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-amber-50 hover:text-amber-700 font-medium transition-all border border-amber-300 shadow-sm"
-					>
-						<span>Next Day</span>
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-						</svg>
-					</button>
-				{:else}
-					<div></div>
-				{/if}
-			</div>
-		</div>
-	{/if}
 
 	<!-- Pip's summary -->
 	<div class="p-6 bg-amber-50">
@@ -137,52 +76,6 @@
 						</div>
 					</a>
 				{/each}
-			</div>
-		</div>
-	{/if}
-
-	<!-- Bottom navigation -->
-	{#if showBottomNav}
-		<div class="bg-amber-100 border-t-2 border-amber-200 px-6 py-3">
-			<div class="flex items-center justify-between gap-4">
-				{#if navigation?.previousDate}
-					<button
-						on:click={() => navigateToDate(navigation.previousDate)}
-						class="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-amber-50 hover:text-amber-700 font-medium transition-all border border-amber-300 shadow-sm"
-					>
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-						</svg>
-						<span>Previous Day</span>
-					</button>
-				{:else}
-					<div></div>
-				{/if}
-
-				{#if !navigation?.isToday}
-					<button
-						on:click={navigateToToday}
-						class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-medium transition-all shadow-sm"
-					>
-						Today's Briefing
-					</button>
-				{:else}
-					<div></div>
-				{/if}
-
-				{#if navigation?.nextDate}
-					<button
-						on:click={() => navigateToDate(navigation.nextDate)}
-						class="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-amber-50 hover:text-amber-700 font-medium transition-all border border-amber-300 shadow-sm"
-					>
-						<span>Next Day</span>
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-						</svg>
-					</button>
-				{:else}
-					<div></div>
-				{/if}
 			</div>
 		</div>
 	{/if}

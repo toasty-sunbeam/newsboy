@@ -196,6 +196,50 @@
 
 	<!-- Main content -->
 	<main class="container mx-auto px-4 py-8">
+		<!-- Top navigation for briefing history -->
+		{#if briefingNavigation && !briefingNavigation.isToday}
+			<div class="mb-6">
+				<div class="bg-white rounded-lg shadow-md border-2 border-amber-300 px-6 py-4">
+					<div class="flex items-center justify-between gap-4">
+						{#if briefingNavigation.previousDate}
+							<button
+								on:click={() => window.location.href = `/?briefingDate=${briefingNavigation.previousDate}`}
+								class="flex items-center gap-2 px-4 py-2 bg-amber-100 text-gray-700 rounded-lg hover:bg-amber-200 hover:text-amber-800 font-medium transition-all border border-amber-300"
+							>
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+								</svg>
+								<span>Previous Day</span>
+							</button>
+						{:else}
+							<div></div>
+						{/if}
+
+						<button
+							on:click={() => window.location.href = '/'}
+							class="px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-semibold transition-all shadow-md"
+						>
+							📰 Today's Briefing
+						</button>
+
+						{#if briefingNavigation.nextDate}
+							<button
+								on:click={() => window.location.href = `/?briefingDate=${briefingNavigation.nextDate}`}
+								class="flex items-center gap-2 px-4 py-2 bg-amber-100 text-gray-700 rounded-lg hover:bg-amber-200 hover:text-amber-800 font-medium transition-all border border-amber-300"
+							>
+								<span>Next Day</span>
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+								</svg>
+							</button>
+						{:else}
+							<div></div>
+						{/if}
+					</div>
+				</div>
+			</div>
+		{/if}
+
 		{#if loading}
 			<!-- Loading state -->
 			<div class="flex flex-col items-center justify-center py-20">
@@ -298,7 +342,7 @@
 			<!-- Pip's Daily Briefing -->
 			{#if briefing}
 				<div class="mb-8">
-					<BriefingCard {briefing} navigation={briefingNavigation} />
+					<BriefingCard {briefing} />
 				</div>
 			{/if}
 
@@ -357,6 +401,50 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- Bottom navigation for briefing history -->
+		{#if briefingNavigation && briefingNavigation.previousDate}
+			<div class="container mx-auto px-4 pb-8">
+				<div class="bg-white rounded-lg shadow-md border-2 border-amber-300 px-6 py-4">
+					<div class="flex items-center justify-between gap-4">
+						<button
+							on:click={() => window.location.href = `/?briefingDate=${briefingNavigation.previousDate}`}
+							class="flex items-center gap-2 px-4 py-2 bg-amber-100 text-gray-700 rounded-lg hover:bg-amber-200 hover:text-amber-800 font-medium transition-all border border-amber-300"
+						>
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+							</svg>
+							<span>Previous Day</span>
+						</button>
+
+						{#if !briefingNavigation.isToday}
+							<button
+								on:click={() => window.location.href = '/'}
+								class="px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-semibold transition-all shadow-md"
+							>
+								📰 Today's Briefing
+							</button>
+						{:else}
+							<div></div>
+						{/if}
+
+						{#if briefingNavigation.nextDate}
+							<button
+								on:click={() => window.location.href = `/?briefingDate=${briefingNavigation.nextDate}`}
+								class="flex items-center gap-2 px-4 py-2 bg-amber-100 text-gray-700 rounded-lg hover:bg-amber-200 hover:text-amber-800 font-medium transition-all border border-amber-300"
+							>
+								<span>Next Day</span>
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+								</svg>
+							</button>
+						{:else}
+							<div></div>
+						{/if}
+					</div>
+				</div>
+			</div>
+		{/if}
 
 		<!-- Calming Unsplash image - full width, always shown -->
 		<div class="full-width-image-container">
