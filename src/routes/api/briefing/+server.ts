@@ -9,10 +9,12 @@ import { prisma } from '$lib/server/db';
 /**
  * GET /api/briefing
  * Returns today's daily briefing with featured articles
+ * Supports ?date=YYYY-MM-DD to fetch a specific date's briefing
  */
 export const GET: RequestHandler = async ({ url }) => {
 	try {
 		const listAll = url.searchParams.get('all') === 'true';
+		const dateParam = url.searchParams.get('date');
 
 		// If ?all=true, return list of all briefings
 		if (listAll) {
@@ -36,19 +38,27 @@ export const GET: RequestHandler = async ({ url }) => {
 			});
 		}
 
-		// Otherwise, return today's briefing
-		const today = new Date();
-		today.setHours(0, 0, 0, 0);
+		// Determine which date to fetch
+		let targetDate: Date;
+		if (dateParam) {
+			// Parse the date from the query parameter (YYYY-MM-DD format)
+			targetDate = new Date(dateParam);
+			targetDate.setHours(0, 0, 0, 0);
+		} else {
+			// Default to today
+			targetDate = new Date();
+			targetDate.setHours(0, 0, 0, 0);
+		}
 
 		const briefing = await prisma.dailyBriefing.findUnique({
-			where: { date: today }
+			where: { date: targetDate }
 		});
 
 		if (!briefing) {
 			return json(
 				{
 					briefing: null,
-					message: "No briefing available for today yet, gov'nor!"
+					message: "No briefing available for this date, gov'nor!"
 				},
 				{ status: 404 }
 			);
@@ -72,6 +82,28 @@ export const GET: RequestHandler = async ({ url }) => {
 			.map((id) => articles.find((a) => a.id === id))
 			.filter(Boolean);
 
+		// Find previous and next briefings for navigation
+		const previousBriefing = await prisma.dailyBriefing.findFirst({
+			where: {
+				date: { lt: targetDate }
+			},
+			orderBy: { date: 'desc' },
+			select: { date: true }
+		});
+
+		const nextBriefing = await prisma.dailyBriefing.findFirst({
+			where: {
+				date: { gt: targetDate }
+			},
+			orderBy: { date: 'asc' },
+			select: { date: true }
+		});
+
+		// Check if this is today's briefing
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+		const isToday = targetDate.getTime() === today.getTime();
+
 		return json({
 			briefing: {
 				id: briefing.id,
@@ -79,6 +111,11 @@ export const GET: RequestHandler = async ({ url }) => {
 				pipSummary: briefing.pipSummary,
 				generatedAt: briefing.generatedAt.toISOString(),
 				featuredArticles: sortedArticles
+			},
+			navigation: {
+				isToday,
+				previousDate: previousBriefing ? previousBriefing.date.toISOString().split('T')[0] : null,
+				nextDate: nextBriefing ? nextBriefing.date.toISOString().split('T')[0] : null
 			}
 		});
 	} catch (error) {

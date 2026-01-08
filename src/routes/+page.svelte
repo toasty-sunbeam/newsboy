@@ -15,6 +15,12 @@
 		featuredArticles: ArticleWithSource[];
 	};
 
+	type BriefingNavigation = {
+		isToday: boolean;
+		previousDate: string | null;
+		nextDate: string | null;
+	};
+
 	type DripStatus = {
 		enabled: boolean;
 		totalForToday?: number;
@@ -28,6 +34,7 @@
 
 	let articles: ArticleWithSource[] = [];
 	let briefing: Briefing | null = null;
+	let briefingNavigation: BriefingNavigation | null = null;
 	let drip: DripStatus | null = null;
 	let loading = true;
 	let error = '';
@@ -103,15 +110,18 @@
 				error = data.error || 'Failed to load articles';
 			}
 
-			// Fetch today's briefing
+			// Fetch briefing (either for a specific date or today)
 			try {
-				const briefingResponse = await fetch('/api/briefing');
+				const briefingDate = urlParams.get('briefingDate');
+				const briefingUrl = briefingDate ? `/api/briefing?date=${briefingDate}` : '/api/briefing';
+				const briefingResponse = await fetch(briefingUrl);
 				if (briefingResponse.ok) {
 					const briefingData = await briefingResponse.json();
 					briefing = briefingData.briefing;
-					console.log('Briefing loaded:', briefing);
+					briefingNavigation = briefingData.navigation || null;
+					console.log('Briefing loaded:', briefing, 'Navigation:', briefingNavigation);
 				} else {
-					console.log('No briefing available today');
+					console.log('No briefing available for this date');
 				}
 			} catch (err) {
 				console.error('Failed to load briefing:', err);
@@ -288,7 +298,7 @@
 			<!-- Pip's Daily Briefing -->
 			{#if briefing}
 				<div class="mb-8">
-					<BriefingCard {briefing} />
+					<BriefingCard {briefing} navigation={briefingNavigation} />
 				</div>
 			{/if}
 
