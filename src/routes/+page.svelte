@@ -1,10 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import ArticleCard from '$lib/components/ArticleCard.svelte';
+	import BriefingCard from '$lib/components/BriefingCard.svelte';
 	import CaughtUp from '$lib/components/CaughtUp.svelte';
 	import type { Article, Source } from '@prisma/client';
 
 	type ArticleWithSource = Article & { source: Source };
+
+	type Briefing = {
+		id: string;
+		date: string;
+		pipSummary: string;
+		generatedAt: string;
+		featuredArticles: ArticleWithSource[];
+	};
 
 	type DripStatus = {
 		enabled: boolean;
@@ -18,6 +27,7 @@
 	};
 
 	let articles: ArticleWithSource[] = [];
+	let briefing: Briefing | null = null;
 	let drip: DripStatus | null = null;
 	let loading = true;
 	let error = '';
@@ -91,6 +101,20 @@
 				});
 			} else {
 				error = data.error || 'Failed to load articles';
+			}
+
+			// Fetch today's briefing
+			try {
+				const briefingResponse = await fetch('/api/briefing');
+				if (briefingResponse.ok) {
+					const briefingData = await briefingResponse.json();
+					briefing = briefingData.briefing;
+					console.log('Briefing loaded:', briefing);
+				} else {
+					console.log('No briefing available today');
+				}
+			} catch (err) {
+				console.error('Failed to load briefing:', err);
 			}
 
 			// Fetch header image
@@ -258,6 +282,13 @@
 							{formatNextRevealTime(drip.nextRevealHour)}
 						</span>
 					</div>
+				</div>
+			{/if}
+
+			<!-- Pip's Daily Briefing -->
+			{#if briefing}
+				<div class="mb-8">
+					<BriefingCard {briefing} />
 				</div>
 			{/if}
 

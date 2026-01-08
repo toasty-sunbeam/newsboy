@@ -406,7 +406,17 @@ PUT  /api/settings          # Update settings
    - Crayon playground at /crayon-playground for prompt experimentation
    - ArticleCard displays crayon images with "Drawn by Pip" badge
    - Placeholder shown for articles without images when feature disabled
-10. [ ] Daily briefing generation (Claude Haiku + Pip voice)
+10. ✅ **Daily briefing generation (Claude Haiku + Pip voice)**
+   - claude.ts implementation with generateDailyBriefing function
+   - Uses Claude Haiku for cost efficiency (~$0.50/month)
+   - Generates Pip's cockney briefing for top 3 articles
+   - Integrated into nightly batch process (generateBriefingForTomorrow)
+   - Manual trigger via POST /api/batch?briefing=true
+   - API endpoints: GET /api/briefing, GET /api/briefing/:date, GET /api/briefing?all=true
+   - BriefingCard component with Victorian newspaper styling
+   - Displayed at top of feed with featured articles links
+   - Fallback briefing if API fails
+   - Briefings stored in database for history browsing
 11. [ ] Briefing history browsing
 
 ### Phase 3: Conversational Tuning
@@ -437,7 +447,7 @@ PUT  /api/settings          # Update settings
 - [x] **Visual imagery throughout** (Unsplash photos at header and footer, always shown)
 
 ### Phase 2: Pip's Personality Features
-- [ ] Daily briefing: Pip's top 3 picks with cockney summaries
+- [x] **Daily briefing: Pip's top 3 picks with cockney summaries** — integrated with Claude Haiku
 - [ ] Briefing history: browse past days
 - [x] **Crayon drawings for image-less articles (Replicate SD 1.5)** — with feature flag and playground
 - [ ] Text input for natural language preference adjustment
