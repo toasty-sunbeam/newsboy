@@ -12,7 +12,8 @@
     "db:check:sources": "bun run src/lib/server/db-check.ts sources",
     "db:reset:articles": "bun run src/lib/server/db-reset.ts articles",
     "db:reset:sources": "bun run src/lib/server/db-reset.ts sources",
-    "db:reset:all": "bun run src/lib/server/db-reset.ts all"
+    "db:reset:all": "bun run src/lib/server/db-reset.ts all",
+    "db:init:preferences": "bun run src/lib/server/init-preferences.ts"
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "^3.0.0",
