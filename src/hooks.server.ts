@@ -5,7 +5,7 @@
 import 'dotenv/config';
 
 import { startNightlyBatch } from '$lib/server/cron';
-import { db } from '$lib/server/db';
+import { prisma } from '$lib/server/db';
 
 // Initialize database (ensure default preferences exist)
 async function initDatabase() {
@@ -13,13 +13,13 @@ async function initDatabase() {
 		console.log('[DB] Checking database initialization...');
 
 		// Ensure default preferences exist
-		const existingPrefs = await db.userPreferences.findUnique({
+		const existingPrefs = await prisma.userPreferences.findUnique({
 			where: { id: 'default' }
 		});
 
 		if (!existingPrefs) {
 			console.log('[DB] Creating default user preferences...');
-			await db.userPreferences.create({
+			await prisma.userPreferences.create({
 				data: {
 					id: 'default',
 					interests: '{}',

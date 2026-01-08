@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { db } from '$lib/server/db';
+import { prisma } from '$lib/server/db';
 
 const DEFAULT_PREFERENCES_ID = 'default';
 
@@ -9,12 +9,12 @@ const DEFAULT_PREFERENCES_ID = 'default';
  * Creates it if it doesn't exist.
  */
 async function ensureDefaultPreferences() {
-	const existing = await db.userPreferences.findUnique({
+	const existing = await prisma.userPreferences.findUnique({
 		where: { id: DEFAULT_PREFERENCES_ID }
 	});
 
 	if (!existing) {
-		return await db.userPreferences.create({
+		return await prisma.userPreferences.create({
 			data: {
 				id: DEFAULT_PREFERENCES_ID,
 				interests: '{}',
@@ -103,7 +103,7 @@ export const PUT: RequestHandler = async ({ request }) => {
 		}
 
 		// Update the preferences
-		const updated = await db.userPreferences.update({
+		const updated = await prisma.userPreferences.update({
 			where: { id: DEFAULT_PREFERENCES_ID },
 			data
 		});
