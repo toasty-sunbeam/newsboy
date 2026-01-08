@@ -45,11 +45,15 @@ export const POST: RequestHandler = async ({ url }) => {
 		}
 
 		if (regenerate) {
-			// Just regenerate slots for today (no RSS fetch)
+			// Regenerate slots for today and briefing (no RSS fetch)
 			const result = await regenerateDailySlotsForToday();
+
+			// Also generate today's briefing
+			await generateBriefingForToday();
+
 			return json({
 				success: true,
-				message: `Regenerated feed: ${result.created} articles slotted for today`,
+				message: `Regenerated feed: ${result.created} articles slotted for today, briefing generated`,
 				...result
 			});
 		}
