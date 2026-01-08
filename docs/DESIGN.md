@@ -397,7 +397,15 @@ PUT  /api/settings          # Update settings
    - Photo credits with Unsplash attribution links
    - Edge-to-edge full-width design for maximum visual impact
    - Test mode: Add `?test=caughtup` to URL to simulate caught-up state
-9. [ ] Crayon drawing generation for image-less articles (Replicate SD 1.5)
+9. ✅ **Crayon drawing generation for image-less articles (Replicate SD 1.5)**
+   - Complete replicate.ts integration with SD 1.5
+   - Rate limiting protection (2s delays + exponential backoff retry)
+   - Feature flag: CRAYON_GENERATION_ENABLED (defaults to false)
+   - Integrated into nightly batch process
+   - Manual trigger via POST /api/batch?crayons=true
+   - Crayon playground at /crayon-playground for prompt experimentation
+   - ArticleCard displays crayon images with "Drawn by Pip" badge
+   - Placeholder shown for articles without images when feature disabled
 10. [ ] Daily briefing generation (Claude Haiku + Pip voice)
 11. [ ] Briefing history browsing
 
@@ -431,7 +439,7 @@ PUT  /api/settings          # Update settings
 ### Phase 2: Pip's Personality Features
 - [ ] Daily briefing: Pip's top 3 picks with cockney summaries
 - [ ] Briefing history: browse past days
-- [ ] Crayon drawings for image-less articles (Replicate SD 1.5)
+- [x] **Crayon drawings for image-less articles (Replicate SD 1.5)** — with feature flag and playground
 - [ ] Text input for natural language preference adjustment
 - [ ] Claude API (Haiku) for intent parsing
 - [ ] Pip-voiced responses for tuning
