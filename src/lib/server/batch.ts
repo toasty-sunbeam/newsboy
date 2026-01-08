@@ -490,6 +490,8 @@ async function generateCrayonDrawingsForTomorrow() {
  * (for testing/manual use)
  */
 async function generateCrayonDrawingsForToday() {
+	if (process.env.CRAYON_GENERATION_ENABLED !== 'true') return false;
+
 	console.log('\n🖍️  Generating crayon drawings for today\'s image-less articles...');
 
 	const today = new Date();
