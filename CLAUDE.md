@@ -128,3 +128,34 @@ All system messages should use this voice. See DESIGN.md for more examples.
 - No read/unread state tracking needed for MVP
 - Crayon drawings use SD 1.5 on Replicate (~$0.004/image)
 - Keep it simple—we can add complexity later
+
+### Working with Prisma in Claude Code Environment
+
+**Important notes when Claude Code is working on this project:**
+
+1. **Dependencies may already be installed**: If `node_modules` exists, packages are already installed. Don't run `bun install` unless necessary.
+
+2. **Prisma client generation**:
+   - If you see `Cannot read properties of undefined (reading 'userPreferences')`, the Prisma client needs to be generated
+   - Run: `bunx prisma generate` (generates the TypeScript client from schema)
+   - This creates `node_modules/@prisma/client` with all typed models
+
+3. **Database initialization**:
+   - After `prisma generate`, run: `bunx prisma db push` (creates/syncs newsboy.db)
+   - These are **two separate steps** - both are required
+   - The app auto-initializes default preferences on startup (see `src/hooks.server.ts`)
+
+4. **When npm registry has issues**:
+   - Use existing `node_modules` if available
+   - Prisma CLI may already be at `node_modules/.bin/prisma`
+   - Run commands directly: `./node_modules/.bin/prisma generate`
+
+5. **Import naming**:
+   - **Always** use: `import { prisma } from '$lib/server/db'`
+   - Never use: `import { db } from '$lib/server/db'` (will be undefined)
+   - The export in `db.ts` is named `prisma` to match the rest of the codebase
+
+6. **Testing changes**:
+   - After Prisma changes, restart dev server to pick up new client
+   - Check server startup logs for `[DB] ✅ Default preferences created`
+   - Visit `/settings` to verify preferences API works
