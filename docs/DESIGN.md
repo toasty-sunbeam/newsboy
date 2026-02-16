@@ -420,10 +420,27 @@ PUT  /api/settings          # Update settings
 11. [ ] Briefing history browsing
 
 ### Phase 3: Conversational Tuning
-12. [ ] Preference profile storage
-13. [ ] Tuning endpoint (parse intent, update prefs)
-14. [ ] Pip-voiced responses
-15. [ ] Apply preferences to article scoring
+12. ✅ **Preference profile storage**
+   - UserPreferences model with interests, sourceWeights, moodBalance, preferLongForm, preferVisual
+   - Auto-initialized on server startup via `src/hooks.server.ts`
+   - API endpoints: GET/PUT `/api/preferences`
+13. ✅ **Tuning endpoint (parse intent, update prefs)**
+   - POST `/api/tune` accepts natural language, returns Pip's response + applied changes
+   - `parseTuningRequest()` in `claude.ts` sends message + current prefs + source list + recent history to Claude Haiku
+   - Returns structured JSON with incremental preference changes
+   - Changes merged incrementally (interests/sourceWeights merged, not replaced; setting weight to 0 removes entry)
+   - All interactions logged to TuningLog for conversation continuity
+14. ✅ **Pip-voiced responses**
+   - Claude generates 1-2 sentence cockney confirmations for each tuning request
+   - Graceful fallback if API fails
+   - Recent tuning history (last 5) included in prompt for follow-up context
+15. ✅ **Apply preferences to article scoring**
+   - `src/lib/server/scoring.ts` calculates relevanceScore for each article
+   - Scoring factors: topic relevance (40%), source weight (20%), recency (25%), format preferences (15%)
+   - Topic relevance: keyword matching interests against title/excerpt/source category
+   - Recency: exponential decay with ~24h half-life
+   - Scoring runs in all batch paths: nightly cron, manual trigger, slot regeneration
+   - "Talk to Pip" collapsible UI on main feed page for inline tuning
 
 ### Phase 4: Polish
 16. [ ] Settings UI (manage sources, drip rate)
@@ -450,10 +467,10 @@ PUT  /api/settings          # Update settings
 - [x] **Daily briefing: Pip's top 3 picks with cockney summaries** — integrated with Claude Haiku
 - [ ] Briefing history: browse past days
 - [x] **Crayon drawings for image-less articles (Replicate SD 1.5)** — with feature flag and playground
-- [ ] Text input for natural language preference adjustment
-- [ ] Claude API (Haiku) for intent parsing
-- [ ] Pip-voiced responses for tuning
-- [ ] Preference profile storage and application
+- [x] **Text input for natural language preference adjustment** — "Talk to Pip" on main feed
+- [x] **Claude API (Haiku) for intent parsing** — parseTuningRequest in claude.ts
+- [x] **Pip-voiced responses for tuning** — cockney confirmations with conversation context
+- [x] **Preference profile storage and application** — scoring.ts wired into all batch paths
 - [ ] "Tip Pip" interaction (fun feedback mechanism)
 
 ### Phase 3: Personalization & Polish
@@ -761,17 +778,17 @@ newsboy/
 ├── src/
 │   ├── lib/
 │   │   ├── server/
-│   │   │   ├── batch.ts        # Nightly job orchestration (TODO)
-│   │   │   ├── rss.ts          # RSS fetch and parse (TODO)
-│   │   │   ├── scoring.ts      # Article ranking (TODO)
-│   │   │   ├── replicate.ts    # Crayon generation (TODO)
-│   │   │   ├── claude.ts       # Briefing + tuning (TODO)
+│   │   │   ├── batch.ts        # Nightly job orchestration ✅
+│   │   │   ├── rss.ts          # RSS fetch and parse ✅
+│   │   │   ├── scoring.ts      # Article ranking by user preferences ✅
+│   │   │   ├── replicate.ts    # Crayon generation ✅
+│   │   │   ├── claude.ts       # Briefing + conversational tuning ✅
+│   │   │   ├── cron.ts         # Midnight batch scheduler ✅
 │   │   │   └── db.ts           # Prisma client with libsql adapter
 │   │   └── components/
-│   │       ├── ArticleCard.svelte     (TODO)
-│   │       ├── BriefingCard.svelte    (TODO)
-│   │       ├── CaughtUp.svelte        (TODO)
-│   │       └── TuningInput.svelte     (TODO)
+│   │       ├── ArticleCard.svelte     ✅
+│   │       ├── BriefingCard.svelte    ✅
+│   │       └── CaughtUp.svelte        ✅
 │   └── routes/
 │       ├── +page.svelte        # Main feed (welcome page for now)
 │       ├── settings/
