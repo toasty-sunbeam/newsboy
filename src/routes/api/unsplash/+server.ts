@@ -1,10 +1,11 @@
 // Unsplash API endpoint - fetches a random calming image
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { UNSPLASH_ACCESS_KEY } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
 export const GET: RequestHandler = async () => {
 	try {
+		const UNSPLASH_ACCESS_KEY = env.UNSPLASH_ACCESS_KEY;
 		if (!UNSPLASH_ACCESS_KEY) {
 			return json({ error: 'Unsplash API key not configured' }, { status: 500 });
 		}

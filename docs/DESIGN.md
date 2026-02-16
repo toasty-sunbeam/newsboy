@@ -428,7 +428,13 @@ PUT  /api/settings          # Update settings
 ### Phase 4: Polish
 16. [ ] Settings UI (manage sources, drip rate)
 17. [ ] Error handling and edge cases
-18. [ ] Docker container for NAS deployment
+18. ✅ **Docker container for NAS deployment**
+   - Multi-stage Dockerfile using `oven/bun` (deps → build → slim runtime)
+   - docker-compose.yml for one-command Synology deployment
+   - Entrypoint script auto-applies DB schema on first start
+   - SQLite persisted via Docker volume (`newsboy-data`)
+   - SvelteKit switched from adapter-auto to adapter-node
+   - See `DOCKER.md` for deployment instructions
 
 ## MVP Scope
 
@@ -646,7 +652,10 @@ When an article has no usable image, Pip "draws" one for you:
 
 ### Deployment
 - **Platform**: Docker container on Synology DS220+
-- **Database file**: Stored on NAS volume for persistence and easy backup
+- **Adapter**: SvelteKit adapter-node (for containerized deployment)
+- **Database file**: Stored on NAS volume (`/data/newsboy.db`) for persistence and easy backup
+- **Config files**: `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `.dockerignore`
+- **Instructions**: See `DOCKER.md`
 
 ## Open Questions
 
@@ -753,6 +762,11 @@ model TuningLog {
 ```
 newsboy/
 ├── CLAUDE.md
+├── DOCKER.md                          # Synology deployment instructions
+├── Dockerfile                         # Multi-stage Bun build
+├── docker-compose.yml                 # One-command deployment
+├── docker-entrypoint.sh               # DB init + app start
+├── .dockerignore
 ├── docs/
 │   └── DESIGN.md
 ├── prisma/
@@ -876,6 +890,7 @@ export function startNightlyBatch() {
 
 ## Document History
 
+- **v0.8** (2026-02-16): Added Docker deployment for Synology NAS (Dockerfile, docker-compose, entrypoint). Switched SvelteKit to adapter-node. Added `DOCKER.md` with deployment instructions.
 - **v0.7** (2026-01-01): Removed OPML import, added category-based feed management. Updated Phase 1 status to reflect completed tasks: SvelteKit + Prisma 7 initialized, category-based settings UI completed.
 - **v0.6**: Added implementation notes, Prisma schema, file structure, batch pseudocode
 - **Earlier versions**: Initial design document with Pip character, product philosophy, and technical architecture
