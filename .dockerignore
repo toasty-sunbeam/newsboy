@@ -1,0 +1,11 @@
+node_modules
+build
+.svelte-kit
+*.db
+*.db-journal
+.env
+.git
+.gitignore
+docs
+README.md
+CLAUDE.md

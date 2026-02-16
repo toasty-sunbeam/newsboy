@@ -5,15 +5,18 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { Article } from '@prisma/client';
 
-const apiKey = process.env.ANTHROPIC_API_KEY;
+let anthropic: Anthropic;
 
-if (!apiKey) {
-	throw new Error('ANTHROPIC_API_KEY environment variable is required');
+function getClient(): Anthropic {
+	if (!anthropic) {
+		const apiKey = process.env.ANTHROPIC_API_KEY;
+		if (!apiKey) {
+			throw new Error('ANTHROPIC_API_KEY environment variable is required');
+		}
+		anthropic = new Anthropic({ apiKey });
+	}
+	return anthropic;
 }
-
-const anthropic = new Anthropic({
-	apiKey
-});
 
 export interface BriefingInput {
 	title: string;
@@ -67,7 +70,7 @@ Example tone (don't copy exactly):
 Now write your briefing:`;
 
 	try {
-		const response = await anthropic.messages.create({
+		const response = await getClient().messages.create({
 			model: 'claude-3-5-haiku-20241022',
 			max_tokens: 300,
 			temperature: 0.7,
