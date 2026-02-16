@@ -2,6 +2,7 @@
 // Uses native JavaScript timers - no external dependencies needed
 
 import { fetchAllFeeds, createDailySlotsForTomorrow, createDailySlotsForToday } from './batch';
+import { scoreArticles } from './scoring';
 
 // Configuration
 const BATCH_HOUR = 0; // Midnight (0-23)
@@ -49,6 +50,7 @@ async function runBatch(forToday = false): Promise<void> {
 
 	try {
 		await fetchAllFeeds();
+		await scoreArticles();
 
 		// Create daily slots
 		if (forToday) {

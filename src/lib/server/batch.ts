@@ -5,6 +5,7 @@ import { prisma } from './db';
 import { fetchAndParseFeed, type FeedItem } from './rss';
 import { generateCrayonDrawing } from './replicate';
 import { generateDailyBriefing } from './claude';
+import { scoreArticles } from './scoring';
 import { env } from '$env/dynamic/private';
 
 // Drip configuration
@@ -31,6 +32,7 @@ async function main() {
 
 	try {
 		await fetchAllFeeds();
+		await scoreArticles();
 		await createDailySlotsForTomorrow();
 		await generateCrayonDrawingsForTomorrow();
 		await generateBriefingForTomorrow();

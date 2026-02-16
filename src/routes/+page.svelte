@@ -36,6 +36,34 @@
 	let headerImagePhotographer = '';
 	let headerImagePhotoUrl = '';
 
+	// Tuning state
+	let tuneOpen = false;
+	let tuneMessage = '';
+	let tuneSending = false;
+	let tuneResponse = '';
+
+	async function sendTuning() {
+		if (!tuneMessage.trim() || tuneSending) return;
+
+		tuneSending = true;
+		tuneResponse = '';
+
+		try {
+			const res = await fetch('/api/tune', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ message: tuneMessage.trim() })
+			});
+			const data = await res.json();
+			tuneResponse = data.response || data.error || 'Something went wrong';
+			tuneMessage = '';
+		} catch {
+			tuneResponse = "Blimey, couldn't reach the server, gov'nor!";
+		} finally {
+			tuneSending = false;
+		}
+	}
+
 	function formatNextRevealTime(hour: number): string {
 		const now = new Date();
 		const revealTime = new Date();
@@ -291,6 +319,43 @@
 					<BriefingCard {briefing} />
 				</div>
 			{/if}
+
+			<!-- Talk to Pip (tuning) -->
+			<div class="mb-8">
+				<button
+					on:click={() => { tuneOpen = !tuneOpen; tuneResponse = ''; }}
+					class="text-sm text-amber-700 hover:text-amber-900 font-medium transition-colors"
+				>
+					{tuneOpen ? 'Close' : 'Talk to Pip'} — tell him what you want more or less of
+				</button>
+
+				{#if tuneOpen}
+					<div class="mt-3 bg-white rounded-lg shadow-md p-4 border-l-4 border-amber-400">
+						<form on:submit|preventDefault={sendTuning} class="flex gap-2">
+							<input
+								type="text"
+								bind:value={tuneMessage}
+								placeholder="e.g. &quot;More science, less politics&quot;"
+								disabled={tuneSending}
+								class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50"
+							/>
+							<button
+								type="submit"
+								disabled={tuneSending || !tuneMessage.trim()}
+								class="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+							>
+								{tuneSending ? 'Sendin...' : 'Send'}
+							</button>
+						</form>
+
+						{#if tuneResponse}
+							<div class="mt-3 bg-amber-50 rounded-lg p-3 text-sm text-gray-700 italic">
+								"{tuneResponse}"
+							</div>
+						{/if}
+					</div>
+				{/if}
+			</div>
 
 			<!-- Two-column masonry layout -->
 			<!-- Mobile: single column -->
