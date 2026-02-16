@@ -1,6 +1,6 @@
 // Claude API integration for Pip's personality features
 // - Daily briefing generation (Pip's top 3 picks in cockney voice)
-// - Conversational tuning (future)
+// - Conversational tuning (parse natural language into preference changes)
 
 import Anthropic from '@anthropic-ai/sdk';
 import type { Article } from '@prisma/client';
@@ -106,4 +106,127 @@ function generateFallbackBriefing(articles: BriefingInput[]): string {
 	briefing += "That's the best of what I found! Have a read, gov'nor!";
 
 	return briefing;
+}
+
+// --- Conversational Tuning ---
+
+export interface TuningContext {
+	currentPreferences: {
+		interests: Record<string, number>;
+		sourceWeights: Record<string, number>;
+		moodBalance: number;
+		preferLongForm: boolean;
+		preferVisual: boolean;
+	};
+	availableSources: { id: string; name: string; category: string }[];
+	recentTuning: { input: string; parsed: string; response: string }[];
+}
+
+export interface TuningResult {
+	changes: {
+		interests?: Record<string, number>;
+		sourceWeights?: Record<string, number>;
+		moodBalance?: number;
+		preferLongForm?: boolean;
+		preferVisual?: boolean;
+	};
+	response: string;
+}
+
+/**
+ * Parse a natural language tuning request into structured preference changes.
+ * Returns both the changes to apply and Pip's response.
+ */
+export async function parseTuningRequest(
+	userMessage: string,
+	context: TuningContext
+): Promise<TuningResult> {
+	const sourcesDescription = context.availableSources
+		.map((s) => `- "${s.name}" (id: ${s.id}, category: ${s.category})`)
+		.join('\n');
+
+	const recentHistory = context.recentTuning
+		.slice(-5)
+		.map((t) => `User: "${t.input}"\nChanges: ${t.parsed}\nPip: "${t.response}"`)
+		.join('\n\n');
+
+	const prompt = `You are the backend parser for Newsboy, a personalized news reader. The user talks to Pip (a cockney Victorian newsboy) to adjust their feed preferences.
+
+Your job: parse the user's message into structured preference changes, and write Pip's response.
+
+CURRENT PREFERENCES:
+- interests: ${JSON.stringify(context.currentPreferences.interests)} (topic → weight, 0.0-1.0)
+- sourceWeights: ${JSON.stringify(context.currentPreferences.sourceWeights)} (sourceId → weight, -1.0 to 1.0)
+- moodBalance: ${context.currentPreferences.moodBalance} (-1 = serious, 0 = balanced, +1 = uplifting)
+- preferLongForm: ${context.currentPreferences.preferLongForm}
+- preferVisual: ${context.currentPreferences.preferVisual}
+
+AVAILABLE SOURCES:
+${sourcesDescription || '(no sources added yet)'}
+
+${recentHistory ? `RECENT CONVERSATION:\n${recentHistory}\n` : ''}
+USER'S MESSAGE: "${userMessage}"
+
+Respond with ONLY valid JSON in this exact format:
+{
+  "changes": {
+    "interests": {"topic": 0.8},
+    "sourceWeights": {"sourceId": -0.5},
+    "moodBalance": 0.3,
+    "preferLongForm": true,
+    "preferVisual": false
+  },
+  "response": "Pip's cockney response confirming the change"
+}
+
+Rules for changes:
+- Only include fields that should change. Omit unchanged fields entirely.
+- interests: merge with existing. Use 0.0 to remove a topic. Values 0.1-1.0 for interest level.
+- sourceWeights: use the source ID (not name). -1.0 = suppress, 0 = neutral, 1.0 = boost.
+- moodBalance: -1.0 to 1.0. Adjust relative to current value unless user is explicit.
+- Changes are incremental — don't reset things the user didn't mention.
+- If the user says "reset" or "start fresh", set interests to {}, sourceWeights to {}, moodBalance to 0.
+
+Rules for Pip's response:
+- 1-2 sentences in cockney Victorian newsboy voice
+- Confirm what you understood and what will change
+- Address user as "gov'nor"
+- Be charming but brief`;
+
+	try {
+		const response = await anthropic.messages.create({
+			model: 'claude-3-5-haiku-20241022',
+			max_tokens: 400,
+			temperature: 0.5,
+			messages: [
+				{
+					role: 'user',
+					content: prompt
+				}
+			]
+		});
+
+		const text = response.content[0].type === 'text' ? response.content[0].text : '';
+
+		// Extract JSON from the response (handle potential markdown code blocks)
+		const jsonMatch = text.match(/\{[\s\S]*\}/);
+		if (!jsonMatch) {
+			throw new Error('No JSON found in response');
+		}
+
+		const parsed = JSON.parse(jsonMatch[0]) as TuningResult;
+
+		// Validate the structure
+		if (!parsed.changes || !parsed.response) {
+			throw new Error('Invalid response structure');
+		}
+
+		return parsed;
+	} catch (error) {
+		console.error('Error parsing tuning request:', error);
+		return {
+			changes: {},
+			response: "Sorry gov'nor, I didn't quite catch that. Could you say it again, a bit plainer like?"
+		};
+	}
 }
