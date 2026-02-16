@@ -3,6 +3,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getCronStatus, triggerBatchNow } from '$lib/server/cron';
 import { regenerateDailySlotsForToday, generateCrayonDrawingsForToday, generateBriefingForToday } from '$lib/server/batch';
+import { scoreArticles } from '$lib/server/scoring';
 
 /**
  * GET /api/batch - Get cron status
@@ -45,7 +46,8 @@ export const POST: RequestHandler = async ({ url }) => {
 		}
 
 		if (regenerate) {
-			// Regenerate slots for today and briefing (no RSS fetch)
+			// Re-score articles with current preferences, then regenerate slots
+			await scoreArticles();
 			const result = await regenerateDailySlotsForToday();
 
 			// Also generate today's briefing
