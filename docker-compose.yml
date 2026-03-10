@@ -21,7 +21,7 @@ services:
       - .env
     environment:
       - DATABASE_URL=file:/data/newsboy.db
-      - ORIGIN=http://localhost:3000
+      - ORIGIN=http://192.168.0.5:3000
 
 volumes:
   newsboy-data:
