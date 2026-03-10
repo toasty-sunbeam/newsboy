@@ -9,6 +9,22 @@ import { prisma } from '$lib/server/db';
  */
 export const DELETE: RequestHandler = async ({ params }) => {
 	try {
+		// Delete in order: daily slots → articles → source (foreign key constraints)
+		const articles = await prisma.article.findMany({
+			where: { sourceId: params.id },
+			select: { id: true }
+		});
+		const articleIds = articles.map((a) => a.id);
+
+		if (articleIds.length > 0) {
+			await prisma.dailySlot.deleteMany({
+				where: { articleId: { in: articleIds } }
+			});
+			await prisma.article.deleteMany({
+				where: { sourceId: params.id }
+			});
+		}
+
 		await prisma.source.delete({
 			where: { id: params.id }
 		});
