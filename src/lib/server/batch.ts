@@ -5,6 +5,7 @@ import { prisma } from './db';
 import { fetchAndParseFeed, type FeedItem } from './rss';
 import { generateCrayonDrawing } from './replicate';
 import { generateDailyBriefing } from './claude';
+import { fetchOgImage } from './og-image';
 import { env } from '$env/dynamic/private';
 
 // Drip configuration
@@ -31,6 +32,7 @@ async function main() {
 
 	try {
 		await fetchAllFeeds();
+		await backfillOgImages();
 		await createDailySlotsForTomorrow();
 		await generateCrayonDrawingsForTomorrow();
 		await generateBriefingForTomorrow();
@@ -105,6 +107,76 @@ async function fetchAllFeeds() {
 	console.log(`New articles: ${totalNew}`);
 	console.log(`Skipped (duplicates): ${totalSkipped}`);
 	console.log(`Errors: ${totalErrors}`);
+}
+
+// OG image backfill configuration
+const OG_FETCH_DELAY_MS = 500; // Delay between fetches to be polite
+const OG_FETCH_MAX = 50; // Max articles to backfill per batch run
+
+/**
+ * Fetch Open Graph images for recent articles that are missing hero images.
+ * Runs after RSS fetching to fill in images that weren't in the feed XML.
+ */
+async function backfillOgImages() {
+	console.log('\n🖼️  Backfilling images from article pages...');
+
+	// Find recent articles without hero images (last 7 days)
+	const sevenDaysAgo = new Date();
+	sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+	const articlesNeedingImages = await prisma.article.findMany({
+		where: {
+			heroImageUrl: null,
+			fetchedAt: { gte: sevenDaysAgo }
+		},
+		orderBy: { fetchedAt: 'desc' },
+		take: OG_FETCH_MAX,
+		select: {
+			id: true,
+			url: true,
+			title: true,
+			displayMode: true
+		}
+	});
+
+	if (articlesNeedingImages.length === 0) {
+		console.log('   ℹ️  All recent articles already have images');
+		return;
+	}
+
+	console.log(`   Found ${articlesNeedingImages.length} articles without images`);
+
+	let foundCount = 0;
+	let missCount = 0;
+
+	for (let i = 0; i < articlesNeedingImages.length; i++) {
+		const article = articlesNeedingImages[i];
+		const shortTitle = article.title.substring(0, 50) + (article.title.length > 50 ? '...' : '');
+
+		const ogImageUrl = await fetchOgImage(article.url);
+
+		if (ogImageUrl) {
+			await prisma.article.update({
+				where: { id: article.id },
+				data: {
+					heroImageUrl: ogImageUrl,
+					displayMode: article.displayMode === 'crayon' ? 'standard' : article.displayMode
+				}
+			});
+			foundCount++;
+			console.log(`   ✅ [${i + 1}/${articlesNeedingImages.length}] "${shortTitle}"`);
+		} else {
+			missCount++;
+			console.log(`   ⬜ [${i + 1}/${articlesNeedingImages.length}] "${shortTitle}" — no og:image`);
+		}
+
+		// Be polite with delays between requests
+		if (i < articlesNeedingImages.length - 1) {
+			await sleep(OG_FETCH_DELAY_MS);
+		}
+	}
+
+	console.log(`\n   🖼️  OG image backfill complete: ${foundCount} found, ${missCount} without images`);
 }
 
 /**
@@ -691,6 +763,7 @@ if (import.meta.main) {
 
 export {
 	fetchAllFeeds,
+	backfillOgImages,
 	storeArticle,
 	createDailySlotsForTomorrow,
 	createDailySlotsForToday,

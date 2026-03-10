@@ -86,11 +86,34 @@ function parseRssFeed(xml: string): ParsedFeed {
 			if (heightMatch) imageHeight = parseInt(heightMatch[1]);
 		}
 
+		// Try media:thumbnail
+		if (!imageUrl) {
+			const mediaThumbnail = itemXml.match(/<media:thumbnail[^>]*>/i)?.[0];
+			if (mediaThumbnail) {
+				imageUrl = mediaThumbnail.match(/url=["']([^"']+)["']/)?.[1];
+				const widthMatch = mediaThumbnail.match(/width=["'](\d+)["']/);
+				const heightMatch = mediaThumbnail.match(/height=["'](\d+)["']/);
+				if (widthMatch) imageWidth = parseInt(widthMatch[1]);
+				if (heightMatch) imageHeight = parseInt(heightMatch[1]);
+			}
+		}
+
 		// Try enclosure
 		if (!imageUrl) {
 			const enclosure = itemXml.match(/<enclosure[^>]*>/i)?.[0];
 			if (enclosure && enclosure.match(/type=["']image\//)) {
 				imageUrl = enclosure.match(/url=["']([^"']+)["']/)?.[1];
+			}
+		}
+
+		// Try finding image in content:encoded (full article content)
+		if (!imageUrl) {
+			const contentEncoded = extractText(itemXml, '<content:encoded>', '</content:encoded>');
+			if (contentEncoded) {
+				const imgMatch = contentEncoded.match(/<img[^>]+src=["']([^"']+)["']/i);
+				if (imgMatch) {
+					imageUrl = imgMatch[1];
+				}
 			}
 		}
 
@@ -146,13 +169,41 @@ function parseAtomFeed(xml: string): ParsedFeed {
 		const published = extractText(entryXml, '<published>', '</published>') ||
 		                 extractText(entryXml, '<updated>', '</updated>');
 
-		// Try to find image
+		// Try to find image from various sources
 		let imageUrl: string | undefined;
+		let imageWidth: number | undefined;
+		let imageHeight: number | undefined;
+
+		// Try media:content
 		const mediaMatch = entryXml.match(/<media:content[^>]*>/i);
 		if (mediaMatch) {
 			imageUrl = mediaMatch[0].match(/url=["']([^"']+)["']/)?.[1];
+			const widthMatch = mediaMatch[0].match(/width=["'](\d+)["']/);
+			const heightMatch = mediaMatch[0].match(/height=["'](\d+)["']/);
+			if (widthMatch) imageWidth = parseInt(widthMatch[1]);
+			if (heightMatch) imageHeight = parseInt(heightMatch[1]);
 		}
 
+		// Try media:thumbnail
+		if (!imageUrl) {
+			const mediaThumbnail = entryXml.match(/<media:thumbnail[^>]*>/i)?.[0];
+			if (mediaThumbnail) {
+				imageUrl = mediaThumbnail.match(/url=["']([^"']+)["']/)?.[1];
+			}
+		}
+
+		// Try content body for images
+		if (!imageUrl) {
+			const content = extractText(entryXml, '<content>', '</content>');
+			if (content) {
+				const imgMatch = content.match(/<img[^>]+src=["']([^"']+)["']/i);
+				if (imgMatch) {
+					imageUrl = imgMatch[1];
+				}
+			}
+		}
+
+		// Try summary for images
 		if (!imageUrl && summary) {
 			const imgMatch = summary.match(/<img[^>]+src=["']([^"']+)["']/i);
 			if (imgMatch) {
@@ -165,7 +216,9 @@ function parseAtomFeed(xml: string): ParsedFeed {
 			title: cleanHtml(title),
 			publishedAt: published ? parseDate(published) : null,
 			excerpt: summary ? cleanHtml(summary).substring(0, 500) : undefined,
-			imageUrl
+			imageUrl,
+			imageWidth,
+			imageHeight
 		};
 	}).filter(item => item.url);
 
