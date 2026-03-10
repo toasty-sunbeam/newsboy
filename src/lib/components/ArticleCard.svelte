@@ -35,7 +35,7 @@
 	href={article.url}
 	target="_blank"
 	rel="noopener noreferrer"
-	class="block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-200 overflow-hidden group"
+	class="block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-200 overflow-hidden group break-words"
 >
 	<!-- Image section -->
 	{#if imageUrl}

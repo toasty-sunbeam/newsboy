@@ -303,13 +303,13 @@
 			<!-- Desktop: two independent columns -->
 			<div class="hidden md:flex gap-6">
 				<!-- Left column (even indices) -->
-				<div class="flex-1 space-y-6">
+				<div class="flex-1 min-w-0 space-y-6">
 					{#each articles.filter((_, i) => i % 2 === 0) as article (article.id)}
 						<ArticleCard {article} />
 					{/each}
 				</div>
 				<!-- Right column (odd indices) -->
-				<div class="flex-1 space-y-6">
+				<div class="flex-1 min-w-0 space-y-6">
 					{#each articles.filter((_, i) => i % 2 === 1) as article (article.id)}
 						<ArticleCard {article} />
 					{/each}
