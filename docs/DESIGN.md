@@ -428,13 +428,12 @@ PUT  /api/settings          # Update settings
 ### Phase 4: Polish
 16. [ ] Settings UI (manage sources, drip rate)
 17. [ ] Error handling and edge cases
-18. ✅ **Docker container for NAS deployment**
-   - Multi-stage Dockerfile using `oven/bun` (deps → build → slim runtime)
-   - docker-compose.yml for one-command Synology deployment
-   - Entrypoint script auto-applies DB schema on first start
-   - SQLite persisted via Docker volume (`newsboy-data`)
-   - SvelteKit switched from adapter-auto to adapter-node
-   - See `DOCKER.md` for deployment instructions
+18. ✅ **Netlify + Turso deployment**
+   - SvelteKit adapter-netlify for serverless deployment
+   - Turso (hosted LibSQL) replaces local SQLite — zero schema changes
+   - `db.ts` supports `DATABASE_AUTH_TOKEN` for Turso remote connections
+   - Set `DATABASE_URL` + `DATABASE_AUTH_TOKEN` in Netlify environment variables
+   - ~~Docker/NAS deployment superseded by Netlify~~ (Dockerfile preserved for reference)
 
 ## MVP Scope
 
@@ -483,9 +482,9 @@ PUT  /api/settings          # Update settings
 - **Content mix**: News articles AND webcomics in the same feed. Webcomics add visual variety and levity.
 - **Feed management**: Category-based system (create categories, paste RSS URLs). No OPML import needed.
 - **Character**: Pip (the newsboy) — pixel art illustrations to be created separately.
-- **Hosting**: Synology DS220+ (existing NAS). Hetzner VPS as fallback.
+- **Hosting**: Netlify (serverless, zero-ops, free tier sufficient for single user).
+- **Database**: Turso (hosted LibSQL/SQLite — zero migration from local SQLite, free tier).
 - **Runtime**: Bun (fast, modern, good SQLite support).
-- **Database**: SQLite (lightweight, no server process, easy backups).
 - **ORM**: Prisma (schema-first, type-safe, minimal SQL writing).
 - **LLM**: Claude API with Haiku model for cost efficiency.
 - **Image generation**: Replicate with Stable Diffusion 1.5 (~$0.004/image).
@@ -510,27 +509,28 @@ PUT  /api/settings          # Update settings
 
 ## Hosting & Cost Strategy
 
-### Primary: Synology DS220+ (Existing Hardware)
+### Primary: Netlify
 
-The app will run on an existing Synology DS220+ NAS, which already hosts FreshRSS.
+The app runs on Netlify (serverless functions + static frontend) with Turso as the hosted database.
 
-**DS220+ Specs:**
-- Intel Celeron J4025 dual-core (2.0GHz, bursts to 2.9GHz)
-- 2GB DDR4 RAM (upgradeable to 6GB — recommended)
-- Docker support via Container Manager
-- Always-on, already running 24/7
+**Why Netlify:**
+- Zero-ops deployment — push to git, it deploys
+- SvelteKit adapter-netlify handles SSR and API routes as Netlify Functions
+- Generous free tier for a single-user app
 
-**Why this works:**
-- Heavy compute (LLM, image generation) is offloaded to external APIs
-- RSS fetching and serving a single user is lightweight
-- Zero additional hosting cost
+**Database: Turso (hosted LibSQL)**
+- Turso is distributed SQLite — same schema, same Prisma libsql adapter already in place
+- Zero migration needed from local SQLite
+- Free tier: 500 databases, 9 GB storage, 1 billion row reads/month
+- Connection: `DATABASE_URL=libsql://your-db.turso.io` + `DATABASE_AUTH_TOKEN`
 
-**Potential concerns:**
-- RAM is tight at 2GB if running multiple containers
-- CPU may chug during image processing
-- Recommendation: Upgrade RAM to 6GB (~$20 one-time)
-
-**Fallback:** If the DS220+ struggles, a Hetzner CX23 VPS costs ~€3.50/month.
+**Setup:**
+```bash
+turso auth login
+turso db create newsboy
+turso db tokens create newsboy   # → DATABASE_AUTH_TOKEN
+```
+Add both env vars in Netlify → Site Settings → Environment Variables.
 
 ### API Services
 
@@ -550,7 +550,8 @@ The app will run on an existing Synology DS220+ NAS, which already hosts FreshRS
 
 | Item | Cost |
 |------|------|
-| Hosting (DS220+) | $0 |
+| Netlify hosting | $0 (free tier) |
+| Turso database | $0 (free tier) |
 | Claude API (Haiku) | ~$0.50 |
 | Replicate SD 1.5 | ~$1-2 |
 | **Total** | **~$2-3/month** |
@@ -636,8 +637,8 @@ When an article has no usable image, Pip "draws" one for you:
 ### Backend
 - **Runtime**: Bun (fast, modern, built-in SQLite support)
 - **Framework**: SvelteKit (full-stack: API routes + frontend in one codebase)
-- **Database**: SQLite (lightweight, file-based, perfect for single-user)
-- **ORM**: Prisma (schema-first, type-safe, no raw SQL needed)
+- **Database**: Turso (hosted LibSQL — distributed SQLite, free tier)
+- **ORM**: Prisma (schema-first, type-safe, no raw SQL needed) with `@prisma/adapter-libsql`
 - **Scheduled jobs**: Bun.cron for nightly batch (single process handles RSS fetch, image generation, briefing)
 
 ### Frontend
@@ -651,11 +652,10 @@ When an article has no usable image, Pip "draws" one for you:
 - **Calming images**: Unsplash API for "caught up" state
 
 ### Deployment
-- **Platform**: Docker container on Synology DS220+
-- **Adapter**: SvelteKit adapter-node (for containerized deployment)
-- **Database file**: Stored on NAS volume (`/data/newsboy.db`) for persistence and easy backup
-- **Config files**: `Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`, `.dockerignore`
-- **Instructions**: See `DOCKER.md`
+- **Platform**: Netlify (serverless functions + static frontend)
+- **Adapter**: SvelteKit adapter-netlify
+- **Database**: Turso — set `DATABASE_URL` + `DATABASE_AUTH_TOKEN` in Netlify environment variables
+- **Deploy**: Push to git → Netlify builds and deploys automatically
 
 ## Open Questions
 
@@ -890,6 +890,7 @@ export function startNightlyBatch() {
 
 ## Document History
 
+- **v0.9** (2026-05-27): Migrated hosting from Synology NAS to Netlify + Turso. Replaced local SQLite with Turso (hosted LibSQL). Updated `db.ts` to support `DATABASE_AUTH_TOKEN`. No schema changes required.
 - **v0.8** (2026-02-16): Added Docker deployment for Synology NAS (Dockerfile, docker-compose, entrypoint). Switched SvelteKit to adapter-node. Added `DOCKER.md` with deployment instructions.
 - **v0.7** (2026-01-01): Removed OPML import, added category-based feed management. Updated Phase 1 status to reflect completed tasks: SvelteKit + Prisma 7 initialized, category-based settings UI completed.
 - **v0.6**: Added implementation notes, Prisma schema, file structure, batch pseudocode
