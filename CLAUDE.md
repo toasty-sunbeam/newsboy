@@ -7,7 +7,7 @@ This is **Newsboy**, a personalized news reader with a Victorian street urchin n
 - Anti-doomscroll: finite daily content, not infinite feed
 - Image-heavy, visually rich
 - Conversational tuning (talk to Pip to adjust preferences)
-- Single user, self-hosted on Synology NAS
+- Single user, hosted on Netlify
 
 ## Tech Stack
 
@@ -64,11 +64,14 @@ bun run batch            # Manually trigger nightly job (for testing)
 ## Environment Variables
 
 ```
-DATABASE_URL="file:./newsboy.db"
+DATABASE_URL="libsql://your-db.turso.io"
+DATABASE_AUTH_TOKEN="eyJ..."
 ANTHROPIC_API_KEY="sk-ant-..."
 REPLICATE_API_TOKEN="r8_..."
 UNSPLASH_ACCESS_KEY="..."
 ```
+
+Set these in Netlify → Site Settings → Environment Variables.
 
 ## Implementation Status
 
