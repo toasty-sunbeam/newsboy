@@ -93,6 +93,94 @@ Now write your briefing:`;
 	}
 }
 
+export interface TuningContext {
+	currentPreferences: {
+		interests: Record<string, number>;
+		sourceWeights: Record<string, number>;
+		moodBalance: number;
+		preferLongForm: boolean;
+		preferVisual: boolean;
+	};
+	availableSources: Array<{ id: string; name: string; category: string }>;
+	recentTuning: Array<{ input: string; parsed: string; response: string }>;
+}
+
+export interface TuningResult {
+	response: string;
+	changes: {
+		interests?: Record<string, number>;
+		sourceWeights?: Record<string, number>;
+		moodBalance?: number;
+		preferLongForm?: boolean;
+		preferVisual?: boolean;
+	};
+}
+
+export async function parseTuningRequest(
+	message: string,
+	context: TuningContext
+): Promise<TuningResult> {
+	const sourceList = context.availableSources
+		.map((s) => `  - "${s.name}" (id: ${s.id}, category: ${s.category})`)
+		.join('\n');
+
+	const recentHistory = context.recentTuning
+		.map((t) => `User: "${t.input}"\nPip: "${t.response}"`)
+		.join('\n\n');
+
+	const prompt = `You are Pip, a cheerful Victorian street urchin newsboy who helps the gov'nor tune their news feed. The gov'nor has sent you a message asking to adjust their preferences.
+
+Current preferences:
+- Interests (topic -> weight 0-1): ${JSON.stringify(context.currentPreferences.interests)}
+- Source weights (source id -> weight 0-2, 1=normal, 0=disabled): ${JSON.stringify(context.currentPreferences.sourceWeights)}
+- Mood balance (-1=serious/gloomy, 0=balanced, 1=uplifting/joyful): ${context.currentPreferences.moodBalance}
+- Prefer long-form articles: ${context.currentPreferences.preferLongForm}
+- Prefer visual content: ${context.currentPreferences.preferVisual}
+
+Available sources:
+${sourceList || '  (none)'}
+
+${recentHistory ? `Recent conversation:\n${recentHistory}\n` : ''}
+
+Gov'nor's message: "${message}"
+
+Respond with a JSON object in this exact format:
+{
+  "response": "<Pip's cockney reply acknowledging the changes, 1-3 sentences>",
+  "changes": {
+    "interests": { "<topic>": <weight 0-1> },
+    "sourceWeights": { "<source id>": <weight 0-2> },
+    "moodBalance": <number -1 to 1>,
+    "preferLongForm": <boolean>,
+    "preferVisual": <boolean>
+  }
+}
+
+Only include fields in "changes" that actually need updating. Omit unchanged fields entirely. To remove an interest or source weight, set it to 0. Keep Pip's response in cockney Victorian newsboy voice.`;
+
+	try {
+		const response = await getClient().messages.create({
+			model: 'claude-haiku-4-5-20251001',
+			max_tokens: 400,
+			temperature: 0.5,
+			messages: [{ role: 'user', content: prompt }]
+		});
+
+		const text = response.content[0].type === 'text' ? response.content[0].text.trim() : '';
+		const jsonMatch = text.match(/\{[\s\S]*\}/);
+		if (!jsonMatch) throw new Error('No JSON in response');
+		const parsed = JSON.parse(jsonMatch[0]) as TuningResult;
+		return parsed;
+	} catch (error) {
+		console.error('Error parsing tuning request with Claude:', error);
+		return {
+			response:
+				"Blimey, I 'ad trouble understandin' that one, gov'nor. Could ya say it different like?",
+			changes: {}
+		};
+	}
+}
+
 /**
  * Fallback briefing if Claude API fails
  */

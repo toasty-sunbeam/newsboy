@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "prisma generate && vite build",
     "preview": "vite preview",
     "batch": "bun run src/lib/server/batch.ts",
     "db:check": "bun run src/lib/server/db-check.ts",
