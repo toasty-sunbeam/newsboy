@@ -7,7 +7,7 @@ This is **Newsboy**, a personalized news reader with a Victorian street urchin n
 - Anti-doomscroll: finite daily content, not infinite feed
 - Image-heavy, visually rich
 - Conversational tuning (talk to Pip to adjust preferences)
-- Single user, hosted on Netlify
+- Single user, self-hosted on James's Synology NAS (Urithiru)
 
 ## Tech Stack
 
@@ -64,14 +64,29 @@ bun run batch            # Manually trigger nightly job (for testing)
 ## Environment Variables
 
 ```
-DATABASE_URL="libsql://your-db.turso.io"
-DATABASE_AUTH_TOKEN="eyJ..."
+DATABASE_URL="file:/data/newsboy.db"   # set by docker-compose.yml
 ANTHROPIC_API_KEY="sk-ant-..."
-REPLICATE_API_TOKEN="r8_..."
 UNSPLASH_ACCESS_KEY="..."
+REPLICATE_API_TOKEN="r8_..."           # optional; crayon generation is off by default
+CRAYON_GENERATION_ENABLED="false"
 ```
 
-Set these in Netlify → Site Settings → Environment Variables.
+Secrets live in the Portainer stack's environment variables on the NAS, never in the repo.
+
+## Deployment (how Claude ships changes)
+
+- Netlify is gone; the SvelteKit adapter is `adapter-node`. Don't switch it back.
+- Push to `main` → `.github/workflows/docker.yml` builds a multi-arch image and pushes
+  `ghcr.io/toasty-sunbeam/newsboy:latest` (plus a `sha-<commit>` tag).
+- Watchtower on the NAS polls every 5 minutes and recreates the `newsboy` container.
+- Pull requests build the image without pushing; a green PR check means the image builds.
+- Check CI from a sandbox without auth (public repo):
+  `curl -s https://api.github.com/repos/toasty-sunbeam/newsboy/actions/runs?per_page=3`
+- The SQLite DB is bind-mounted at `/volume1/docker/newsboy/data` on the NAS; the entrypoint runs
+  `prisma db push` on start, so schema changes apply automatically. Avoid destructive schema changes.
+- Rollback: set the stack's image to a previous `sha-<commit>` tag in Portainer.
+- Cloud sandboxes can't download Prisma engines (binaries.prisma.sh is blocked), so a local
+  `vite build` fails there. Use the PR build as the real check.
 
 ## Implementation Status
 
