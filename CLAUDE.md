@@ -76,7 +76,7 @@ Secrets live in the Portainer stack's environment variables on the NAS, never in
 ## Deployment (how Claude ships changes)
 
 - Netlify is gone; the SvelteKit adapter is `adapter-node`. Don't switch it back.
-- Push to `main` → `.github/workflows/docker.yml` builds a multi-arch image and pushes
+- Push to `main` → `.github/workflows/docker.yml` builds an amd64 image and pushes
   `ghcr.io/toasty-sunbeam/newsboy:latest` (plus a `sha-<commit>` tag).
 - Watchtower on the NAS polls every 5 minutes and recreates the `newsboy` container.
 - Pull requests build the image without pushing; a green PR check means the image builds.
