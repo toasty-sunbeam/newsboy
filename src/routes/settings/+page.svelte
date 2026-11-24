@@ -9,6 +9,9 @@
 		category: string;
 		contentType: string;
 		enabled: boolean;
+		lastFetchedAt: string | null;
+		lastError: string | null;
+		lastItemCount: number | null;
 	}
 
 	interface CategoryGroup {
@@ -118,12 +121,11 @@
 			const data = await response.json();
 
 			if (response.ok) {
-				showMessage(
-					`Added ${data.added} feeds, skipped ${data.skipped} duplicates`,
-					'success'
-				);
-				category.newFeedsText = '';
-				category.isAdding = false;
+				const failed: { url: string }[] = data.failed ?? [];
+				showMessage(data.message, failed.length ? 'error' : 'success');
+				// Leave any URLs that didn't work in the box so they can be fixed
+				category.newFeedsText = failed.map((f) => f.url).join('\n');
+				category.isAdding = failed.length > 0;
 				await loadSources();
 			} else {
 				showMessage(data.error || 'Failed to add feeds', 'error');
@@ -334,6 +336,13 @@
 												</span>
 											</div>
 											<p class="text-sm text-gray-500 truncate mt-1">{source.feedUrl}</p>
+											{#if source.lastError}
+												<p class="text-sm text-red-600 mt-1">⚠ {source.lastError}</p>
+											{:else if source.lastFetchedAt}
+												<p class="text-xs text-gray-400 mt-1">
+													{source.lastItemCount ?? 0} items · last fetched {new Date(source.lastFetchedAt).toLocaleString()}
+												</p>
+											{/if}
 										</div>
 
 										<div class="flex items-center gap-2 ml-4">

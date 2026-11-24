@@ -17,22 +17,99 @@ export interface ParsedFeed {
 	items: FeedItem[];
 }
 
-/**
- * Fetch and parse an RSS or Atom feed
- */
-export async function fetchAndParseFeed(feedUrl: string): Promise<ParsedFeed> {
-	const response = await fetch(feedUrl, {
-		headers: {
-			'User-Agent': 'Newsboy/1.0 (RSS Reader)'
-		}
-	});
+const FETCH_HEADERS = {
+	'User-Agent': 'Mozilla/5.0 (compatible; Newsboy/1.0; +https://github.com/toasty-sunbeam/newsboy)',
+	Accept: 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.9, text/html;q=0.8, */*;q=0.5'
+};
 
+// Paths to try when a page doesn't advertise its feed
+const COMMON_FEED_PATHS = ['/feed', '/feed/', '/rss', '/rss.xml', '/feed.xml', '/atom.xml', '/index.xml', '/feeds/posts/default'];
+
+async function fetchText(url: string): Promise<{ text: string; finalUrl: string }> {
+	const response = await fetch(url, { headers: FETCH_HEADERS, redirect: 'follow', signal: AbortSignal.timeout(20000) });
 	if (!response.ok) {
-		throw new Error(`Failed to fetch feed: ${response.status} ${response.statusText}`);
+		throw new Error(`HTTP ${response.status} ${response.statusText} from ${url}`);
+	}
+	return { text: await response.text(), finalUrl: response.url || url };
+}
+
+/** True if the document is an RSS, Atom or RDF feed rather than an HTML page */
+export function looksLikeFeed(text: string): boolean {
+	const head = text.slice(0, 2000).toLowerCase();
+	if (head.includes('<html') || head.includes('<!doctype html')) return false;
+	return /<rss[\s>]|<feed[\s>]|<rdf:rdf[\s>]/.test(head);
+}
+
+/** Feed URLs advertised in an HTML page's <link rel="alternate"> tags */
+function findAdvertisedFeeds(html: string, baseUrl: string): string[] {
+	const found: string[] = [];
+	for (const tag of html.match(/<link\b[^>]*>/gi) || []) {
+		const rel = tag.match(/rel=["']([^"']+)["']/i)?.[1]?.toLowerCase() ?? '';
+		const type = tag.match(/type=["']([^"']+)["']/i)?.[1]?.toLowerCase() ?? '';
+		const href = tag.match(/href=["']([^"']+)["']/i)?.[1];
+		if (!href || !rel.split(/\s+/).includes('alternate')) continue;
+		if (!/(rss|atom)\+xml|application\/xml|text\/xml/.test(type)) continue;
+		// Skip per-post comment feeds, which many WordPress pages advertise
+		if (/comments/i.test(href) && found.length > 0) continue;
+		try {
+			found.push(new URL(href.replace(/&amp;/g, '&'), baseUrl).toString());
+		} catch {
+			/* ignore malformed href */
+		}
+	}
+	return found;
+}
+
+export interface ResolvedFeed {
+	feedUrl: string;
+	feed: ParsedFeed;
+}
+
+/**
+ * Turn whatever the user pasted (a feed URL or a website URL) into a working feed.
+ * Like FreshRSS: use the URL if it's a feed, else look for an advertised feed,
+ * else try common feed paths. Throws if nothing works.
+ */
+export async function resolveFeed(inputUrl: string): Promise<ResolvedFeed> {
+	const { text, finalUrl } = await fetchText(inputUrl);
+	if (looksLikeFeed(text)) {
+		return { feedUrl: inputUrl, feed: parseFeed(text) };
 	}
 
-	const xml = await response.text();
-	return parseFeed(xml);
+	const base = new URL(finalUrl);
+	const candidates = [
+		...findAdvertisedFeeds(text, finalUrl),
+		...COMMON_FEED_PATHS.map((path) => new URL(path, base.origin).toString())
+	];
+
+	const tried = new Set<string>();
+	for (const candidate of candidates) {
+		if (tried.has(candidate)) continue;
+		tried.add(candidate);
+		try {
+			const result = await fetchText(candidate);
+			if (looksLikeFeed(result.text)) {
+				return { feedUrl: candidate, feed: parseFeed(result.text) };
+			}
+		} catch {
+			/* try the next candidate */
+		}
+	}
+
+	throw new Error(`No RSS or Atom feed found at ${inputUrl}`);
+}
+
+/**
+ * Fetch and parse an RSS or Atom feed. Throws if the URL returns something
+ * that isn't a feed (e.g. a website homepage), so the problem gets reported
+ * instead of silently yielding zero articles.
+ */
+export async function fetchAndParseFeed(feedUrl: string): Promise<ParsedFeed> {
+	const { text } = await fetchText(feedUrl);
+	if (!looksLikeFeed(text)) {
+		throw new Error(`Not a feed (got an HTML page): ${feedUrl}`);
+	}
+	return parseFeed(text);
 }
 
 /**

@@ -18,6 +18,9 @@ model Source {
   contentType String    @default("article") // article | webcomic | mixed
   enabled     Boolean   @default(true)
   createdAt   DateTime  @default(now())
+  lastFetchedAt DateTime? // When the batch last tried this feed
+  lastError     String?   // Why the last fetch failed (null = it worked)
+  lastItemCount Int?      // How many items the feed had on the last good fetch
   articles    Article[]
 }
 

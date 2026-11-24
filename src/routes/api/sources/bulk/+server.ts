@@ -2,6 +2,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { prisma } from '$lib/server/db';
+import { resolveFeed } from '$lib/server/rss';
 
 /**
  * POST /api/sources/bulk
@@ -21,49 +22,50 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		let added = 0;
 		let skipped = 0;
+		const failed: { url: string; reason: string }[] = [];
 
-		for (const url of urls) {
+		for (const rawUrl of urls) {
+			const url = String(rawUrl).trim();
+			if (!url) continue;
 			try {
-				// Check if feed already exists
-				const existing = await prisma.source.findUnique({
-					where: { feedUrl: url }
-				});
+				// Accept a feed URL or a website URL; find the real feed either way
+				const { feedUrl, feed } = await resolveFeed(url);
 
+				const existing = await prisma.source.findUnique({ where: { feedUrl } });
 				if (existing) {
 					skipped++;
 					continue;
 				}
 
-				// For now, use a simplified name extraction from URL
-				// In Step 4, we'll fetch the actual RSS feed to get the real title
-				const name = extractNameFromUrl(url);
-
-				// Detect content type from URL
-				const contentType = detectContentTypeFromUrl(url);
-
-				// Create new source
 				await prisma.source.create({
 					data: {
-						name,
-						feedUrl: url,
+						name: feed.feedTitle || extractNameFromUrl(url),
+						feedUrl,
+						siteUrl: feedUrl !== url ? url : feed.siteUrl || null,
 						category,
-						contentType,
-						enabled: true
+						contentType: detectContentTypeFromUrl(url),
+						enabled: true,
+						lastItemCount: feed.items.length
 					}
 				});
-
 				added++;
 			} catch (error) {
-				console.error(`Failed to add feed ${url}:`, error);
-				skipped++;
+				const reason = error instanceof Error ? error.message : 'Unknown error';
+				console.error(`Failed to add feed ${url}:`, reason);
+				failed.push({ url, reason });
 			}
 		}
 
+		const parts = [`Added ${added} feed${added === 1 ? '' : 's'}`];
+		if (skipped) parts.push(`${skipped} already there`);
+		if (failed.length) parts.push(`couldn't find a feed for: ${failed.map((f) => f.url).join(', ')}`);
+
 		return json({
-			success: true,
-			message: `Added ${added} feeds, skipped ${skipped} duplicates or errors`,
+			success: failed.length === 0,
+			message: parts.join('; '),
 			added,
-			skipped
+			skipped,
+			failed
 		});
 	} catch (error) {
 		console.error('Error in bulk add:', error);

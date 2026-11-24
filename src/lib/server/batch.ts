@@ -2,7 +2,7 @@
 // Run with: bun run batch
 
 import { prisma } from './db';
-import { fetchAndParseFeed, type FeedItem } from './rss';
+import { fetchAndParseFeed, resolveFeed, type FeedItem, type ParsedFeed } from './rss';
 import { generateCrayonDrawing } from './replicate';
 import { generateDailyBriefing } from './claude';
 import { env } from '$env/dynamic/private';
@@ -64,19 +64,33 @@ async function fetchAllFeeds() {
 			console.log(`\n📰 Fetching: ${source.name}`);
 			console.log(`   URL: ${source.feedUrl}`);
 
-			const feed = await fetchAndParseFeed(source.feedUrl);
+			let feed: ParsedFeed;
+			let feedUrl = source.feedUrl;
+			try {
+				feed = await fetchAndParseFeed(source.feedUrl);
+			} catch (fetchError) {
+				// The saved URL may be a website rather than a feed (or the feed moved).
+				// Try discovering the real feed and repair the source if that works.
+				const resolved = await resolveFeed(source.siteUrl || source.feedUrl).catch(() => null);
+				if (!resolved || resolved.feedUrl === source.feedUrl) throw fetchError;
+				feed = resolved.feed;
+				feedUrl = resolved.feedUrl;
+				console.log(`   🔧 Found the real feed: ${feedUrl}`);
+			}
 			console.log(`   Found ${feed.items.length} items in feed`);
 
-			// Update source name and siteUrl if we got them from the feed
-			if (feed.feedTitle && feed.feedTitle !== source.name) {
-				await prisma.source.update({
-					where: { id: source.id },
-					data: {
-						name: feed.feedTitle,
-						siteUrl: feed.siteUrl || source.siteUrl
-					}
-				});
-			}
+			// Record success, the feed's own title, and any repaired URL
+			await prisma.source.update({
+				where: { id: source.id },
+				data: {
+					name: feed.feedTitle || source.name,
+					feedUrl,
+					siteUrl: source.siteUrl || (feedUrl !== source.feedUrl ? source.feedUrl : feed.siteUrl) || null,
+					lastFetchedAt: new Date(),
+					lastError: feed.items.length === 0 ? 'Feed has no items' : null,
+					lastItemCount: feed.items.length
+				}
+			});
 
 			// Store each article
 			let newCount = 0;
@@ -96,7 +110,11 @@ async function fetchAllFeeds() {
 			totalSkipped += skippedCount;
 
 		} catch (error) {
-			console.error(`   ❌ Error fetching ${source.name}:`, error instanceof Error ? error.message : error);
+			const message = error instanceof Error ? error.message : String(error);
+			console.error(`   ❌ Error fetching ${source.name}:`, message);
+			await prisma.source
+				.update({ where: { id: source.id }, data: { lastFetchedAt: new Date(), lastError: message } })
+				.catch(() => {});
 			totalErrors++;
 		}
 	}
