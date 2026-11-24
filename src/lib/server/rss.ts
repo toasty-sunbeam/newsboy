@@ -9,6 +9,8 @@ export interface FeedItem {
 	imageUrl?: string;
 	imageWidth?: number;
 	imageHeight?: number;
+	/** True when the image was scraped from the description HTML (less reliable than media tags) */
+	imageFromBody?: boolean;
 }
 
 export interface ParsedFeed {
@@ -152,6 +154,7 @@ function parseRssFeed(xml: string): ParsedFeed {
 		let imageUrl: string | undefined;
 		let imageWidth: number | undefined;
 		let imageHeight: number | undefined;
+		let imageFromBody = false;
 
 		// Try media:content
 		const mediaContent = itemXml.match(/<media:content[^>]*>/i)?.[0];
@@ -161,6 +164,12 @@ function parseRssFeed(xml: string): ParsedFeed {
 			const heightMatch = mediaContent.match(/height=["'](\d+)["']/);
 			if (widthMatch) imageWidth = parseInt(widthMatch[1]);
 			if (heightMatch) imageHeight = parseInt(heightMatch[1]);
+		}
+
+		// Try media:thumbnail
+		if (!imageUrl) {
+			const thumb = itemXml.match(/<media:thumbnail[^>]*>/i)?.[0];
+			if (thumb) imageUrl = thumb.match(/url=["']([^"']+)["']/)?.[1];
 		}
 
 		// Try enclosure
@@ -173,20 +182,22 @@ function parseRssFeed(xml: string): ParsedFeed {
 
 		// Try finding image in description
 		if (!imageUrl && description) {
-			const imgMatch = description.match(/<img[^>]+src=["']([^"']+)["']/i);
+			const imgMatch = decodeEntities(description).match(/<img[^>]+src=["']([^"']+)["']/i);
 			if (imgMatch) {
-				imageUrl = imgMatch[1];
+				imageUrl = decodeEntities(imgMatch[1]);
+				imageFromBody = true;
 			}
 		}
 
 		return {
-			url: url.trim(),
+			url: decodeEntities(url.trim()),
 			title: cleanHtml(title),
 			publishedAt: pubDate ? parseDate(pubDate) : null,
 			excerpt: description ? cleanHtml(description).substring(0, 500) : undefined,
 			imageUrl,
 			imageWidth,
-			imageHeight
+			imageHeight,
+			imageFromBody
 		};
 	}).filter(item => item.url); // Only keep items with valid URLs
 
@@ -230,19 +241,22 @@ function parseAtomFeed(xml: string): ParsedFeed {
 			imageUrl = mediaMatch[0].match(/url=["']([^"']+)["']/)?.[1];
 		}
 
+		let imageFromBody = false;
 		if (!imageUrl && summary) {
-			const imgMatch = summary.match(/<img[^>]+src=["']([^"']+)["']/i);
+			const imgMatch = decodeEntities(summary).match(/<img[^>]+src=["']([^"']+)["']/i);
 			if (imgMatch) {
-				imageUrl = imgMatch[1];
+				imageUrl = decodeEntities(imgMatch[1]);
+				imageFromBody = true;
 			}
 		}
 
 		return {
-			url: url.trim(),
+			url: decodeEntities(url.trim()),
 			title: cleanHtml(title),
 			publishedAt: published ? parseDate(published) : null,
 			excerpt: summary ? cleanHtml(summary).substring(0, 500) : undefined,
-			imageUrl
+			imageUrl,
+			imageFromBody
 		};
 	}).filter(item => item.url);
 
@@ -280,19 +294,93 @@ function extractText(xml: string, startTag: string, endTag: string): string | un
 	return content.trim();
 }
 
+const NAMED_ENTITIES: Record<string, string> = {
+	amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+	rsquo: '\u2019', lsquo: '\u2018', rdquo: '\u201d', ldquo: '\u201c',
+	mdash: '\u2014', ndash: '\u2013', hellip: '\u2026', bull: '\u2022', middot: '\u00b7',
+	copy: '\u00a9', reg: '\u00ae', trade: '\u2122', deg: '\u00b0', times: '\u00d7',
+	eacute: '\u00e9', egrave: '\u00e8', aacute: '\u00e1', agrave: '\u00e0', iacute: '\u00ed',
+	oacute: '\u00f3', uacute: '\u00fa', ntilde: '\u00f1', ccedil: '\u00e7', ouml: '\u00f6',
+	uuml: '\u00fc', auml: '\u00e4', szlig: '\u00df', euro: '\u20ac', pound: '\u00a3'
+};
+
+/** Decode HTML entities: named (&rsquo;), decimal (&#8217;) and hex (&#x2019;) */
+export function decodeEntities(text: string): string {
+	return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z][a-z0-9]*);/gi, (match, code: string) => {
+		if (code[0] === '#') {
+			const n = code[1] === 'x' || code[1] === 'X' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+			return Number.isFinite(n) && n > 0 && n < 0x110000 ? String.fromCodePoint(n) : match;
+		}
+		return NAMED_ENTITIES[code.toLowerCase()] ?? match;
+	});
+}
+
 /**
- * Remove HTML tags and decode entities
+ * Turn feed HTML into plain text. Feeds often entity-encode their HTML
+ * (&lt;p&gt;), so decode first, then strip tags, then decode what's left.
  */
-function cleanHtml(html: string): string {
-	return html
-		.replace(/<[^>]+>/g, '') // Remove HTML tags
-		.replace(/&quot;/g, '"')
-		.replace(/&apos;/g, "'")
-		.replace(/&lt;/g, '<')
-		.replace(/&gt;/g, '>')
-		.replace(/&amp;/g, '&')
-		.replace(/\s+/g, ' ') // Normalize whitespace
+export function cleanHtml(html: string): string {
+	return decodeEntities(
+		decodeEntities(html)
+			.replace(/<(script|style)[\s\S]*?<\/\1>/gi, '')
+			.replace(/<[^>]+>/g, ' ')
+	)
+		.replace(/\s+/g, ' ')
 		.trim();
+}
+
+export interface PageImage {
+	url: string;
+	width?: number;
+	height?: number;
+}
+
+/**
+ * Find an article's preview image from its page's meta tags
+ * (og:image, twitter:image, image_src), the same image link previews use.
+ * Returns null on any failure; this is best-effort.
+ */
+export async function fetchPageImage(articleUrl: string): Promise<PageImage | null> {
+	try {
+		const response = await fetch(articleUrl, {
+			headers: { ...FETCH_HEADERS, Accept: 'text/html,application/xhtml+xml' },
+			redirect: 'follow',
+			signal: AbortSignal.timeout(10000)
+		});
+		if (!response.ok || !response.body) return null;
+
+		// Meta tags live in <head>; read at most ~300 KB
+		const reader = response.body.getReader();
+		const decoder = new TextDecoder();
+		let html = '';
+		while (html.length < 300_000) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			html += decoder.decode(value, { stream: true });
+			if (/<\/head>/i.test(html)) break;
+		}
+		reader.cancel().catch(() => {});
+
+		const meta: Record<string, string> = {};
+		for (const tag of html.match(/<meta\b[^>]*>/gi) || []) {
+			const key = (tag.match(/(?:property|name)=["']([^"']+)["']/i)?.[1] || '').toLowerCase();
+			const content = tag.match(/content=["']([^"']*)["']/i)?.[1];
+			if (key && content && !(key in meta)) meta[key] = decodeEntities(content.trim());
+		}
+		const linkImage = html.match(/<link\b[^>]*rel=["']image_src["'][^>]*>/i)?.[0]?.match(/href=["']([^"']+)["']/i)?.[1];
+
+		const raw =
+			meta['og:image:secure_url'] || meta['og:image'] || meta['og:image:url'] ||
+			meta['twitter:image'] || meta['twitter:image:src'] || (linkImage && decodeEntities(linkImage));
+		if (!raw) return null;
+
+		const url = new URL(raw, response.url || articleUrl).toString();
+		const width = parseInt(meta['og:image:width'] || '') || undefined;
+		const height = parseInt(meta['og:image:height'] || '') || undefined;
+		return { url, width, height };
+	} catch {
+		return null;
+	}
 }
 
 /**

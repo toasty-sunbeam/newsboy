@@ -2,7 +2,7 @@
 // Run with: bun run batch
 
 import { prisma } from './db';
-import { fetchAndParseFeed, resolveFeed, type FeedItem, type ParsedFeed } from './rss';
+import { fetchAndParseFeed, resolveFeed, fetchPageImage, cleanHtml, type FeedItem, type ParsedFeed } from './rss';
 import { generateCrayonDrawing } from './replicate';
 import { generateDailyBriefing } from './claude';
 import { env } from '$env/dynamic/private';
@@ -39,6 +39,69 @@ async function main() {
 		console.error('\n=== Batch Job Failed ===');
 		console.error(error);
 		process.exit(1);
+	}
+}
+
+/**
+ * Pick a card layout from the image's shape
+ */
+function chooseDisplayMode(
+	contentType: string,
+	imageUrl: string | undefined | null,
+	width?: number | null,
+	height?: number | null
+): string {
+	if (!imageUrl) return 'crayon'; // No image - Pip draws one (if crayons are enabled)
+	if (contentType === 'webcomic') return width && width > 800 ? 'wide' : 'standard';
+	if (width && height) {
+		const ratio = width / height;
+		if (ratio > 1.5) return 'wide';
+		if (ratio < 0.7) return 'tall';
+	}
+	return 'standard';
+}
+
+/**
+ * Fix up articles stored in the last few days: re-clean excerpts that still
+ * contain HTML or entities, and find page images for ones that have none.
+ */
+async function repairRecentArticles() {
+	const since = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+	const articles = await prisma.article.findMany({
+		where: { fetchedAt: { gte: since } },
+		select: { id: true, url: true, excerpt: true, heroImageUrl: true, crayonImageUrl: true, contentType: true }
+	});
+
+	let images = 0;
+	let excerpts = 0;
+	for (const article of articles) {
+		const data: Record<string, unknown> = {};
+
+		if (article.excerpt && /[<&]/.test(article.excerpt)) {
+			const cleaned = cleanHtml(article.excerpt);
+			if (cleaned !== article.excerpt) {
+				data.excerpt = cleaned;
+				excerpts++;
+			}
+		}
+
+		if (!article.heroImageUrl && !article.crayonImageUrl) {
+			const pageImage = await fetchPageImage(article.url);
+			if (pageImage) {
+				data.heroImageUrl = pageImage.url;
+				data.imageWidth = pageImage.width ?? null;
+				data.imageHeight = pageImage.height ?? null;
+				data.displayMode = chooseDisplayMode(article.contentType, pageImage.url, pageImage.width, pageImage.height);
+				images++;
+			}
+		}
+
+		if (Object.keys(data).length > 0) {
+			await prisma.article.update({ where: { id: article.id }, data }).catch(() => {});
+		}
+	}
+	if (images || excerpts) {
+		console.log(`\n🖼️  Repaired recent articles: ${images} images found, ${excerpts} excerpts cleaned`);
 	}
 }
 
@@ -119,6 +182,8 @@ async function fetchAllFeeds() {
 		}
 	}
 
+	await repairRecentArticles();
+
 	console.log('\n--- Summary ---');
 	console.log(`New articles: ${totalNew}`);
 	console.log(`Skipped (duplicates): ${totalSkipped}`);
@@ -146,25 +211,21 @@ async function storeArticle(
 		// Determine content type for this article
 		const contentType = sourceContentType === 'mixed' ? 'article' : sourceContentType;
 
-		// Determine display mode based on image dimensions
-		let displayMode = 'standard';
-		if (item.imageUrl) {
-			if (item.imageWidth && item.imageHeight) {
-				const ratio = item.imageWidth / item.imageHeight;
-				if (ratio > 1.5) {
-					displayMode = 'wide';
-				} else if (ratio < 0.7) {
-					displayMode = 'tall';
-				}
+		// Feeds often lack images, or only have a logo/ad buried in the body.
+		// The article page's og:image is usually the real preview image.
+		let imageUrl = item.imageUrl;
+		let imageWidth = item.imageWidth;
+		let imageHeight = item.imageHeight;
+		if (!imageUrl || item.imageFromBody) {
+			const pageImage = await fetchPageImage(item.url);
+			if (pageImage) {
+				imageUrl = pageImage.url;
+				imageWidth = pageImage.width;
+				imageHeight = pageImage.height;
 			}
-			// For webcomics, default to standard (will show large)
-			if (contentType === 'webcomic') {
-				displayMode = item.imageWidth && item.imageWidth > 800 ? 'wide' : 'standard';
-			}
-		} else {
-			// No image - will need crayon drawing later
-			displayMode = 'crayon';
 		}
+
+		const displayMode = chooseDisplayMode(contentType, imageUrl, imageWidth, imageHeight);
 
 		// Create the article
 		await prisma.article.create({
@@ -174,9 +235,9 @@ async function storeArticle(
 				sourceId,
 				publishedAt: item.publishedAt,
 				contentType,
-				heroImageUrl: item.imageUrl,
-				imageWidth: item.imageWidth,
-				imageHeight: item.imageHeight,
+				heroImageUrl: imageUrl,
+				imageWidth,
+				imageHeight,
 				displayMode,
 				excerpt: item.excerpt,
 				relevanceScore: 0 // Will be scored later
